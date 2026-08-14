@@ -23,6 +23,10 @@
 #   ./claude-swap-redflag.sh 0.16.0                # check a specific version
 #   ./claude-swap-redflag.sh 0.16.0 --baseline 0.15.0b1
 #   ./claude-swap-redflag.sh 0.16.0 --repo /data/sources/claude-swap
+#   ./claude-swap-redflag.sh 0.16.0 --repo . --git-ref 9f62506   # vs a commit,
+#       not the working tree — use this when the tree has moved past the release.
+#       The repo publishes no tags, so pass the "version bump" commit; find it:
+#         git log --oneline -S 'version = "0.16.0"' -- pyproject.toml
 #
 set -euo pipefail
 
@@ -45,10 +49,12 @@ KNOWN_HOSTS=(
 VERSION=""
 BASELINE=""
 REPO=""
+GITREF=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --baseline) BASELINE="$2"; shift 2 ;;
     --repo)     REPO="$2"; shift 2 ;;
+    --git-ref)  GITREF="$2"; shift 2 ;;
     -h|--help)  grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)          VERSION="$1"; shift ;;
   esac
@@ -173,17 +179,61 @@ if [ -n "$BASELINE" ] && [ "$BASELINE" != "$VERSION" ]; then
 fi
 
 # --- 4) Optional: published == local git checkout.
+# Compares the WHOLE package tree recursively, not just top-level *.py — the
+# package has subpackages (tui/) and non-.py assets (.tcss), and a top-level
+# glob would silently skip a backdoor planted in any of them.
 if [ -n "$REPO" ] && [ -d "$REPO/.git" ]; then
-  note "Published $VERSION  vs  local git repo"
-  mism=0
-  for f in "$TGT_SRC"/*.py; do
-    bn="$(basename "$f")"
-    rf="$REPO/src/$DIST/$bn"
-    [ -f "$rf" ] || { echo "  only-in-pypi: $bn"; mism=1; continue; }
-    [ "$(sha256sum "$f"|cut -d' ' -f1)" = "$(sha256sum "$rf"|cut -d' ' -f1)" ] || { echo "  DIFFERS: $bn"; mism=1; }
-  done
-  [ $mism -eq 0 ] && ok "published artifact == repo working tree (all .py match)" \
-                   || flag "published artifact differs from local repo (see above)"
+  if [ -n "$GITREF" ]; then
+    note "Published $VERSION  vs  git ref $GITREF"
+  else
+    note "Published $VERSION  vs  local git working tree"
+  fi
+  mism=0; checked=0
+  while read -r rel; do
+    checked=$((checked+1))
+    pub="$(sha256sum "$TGT_SRC/$rel" | cut -d' ' -f1)"
+    if [ -n "$GITREF" ]; then
+      loc="$(git -C "$REPO" show "$GITREF:src/$DIST/$rel" 2>/dev/null | sha256sum | cut -d' ' -f1)"
+      # sha256sum of empty input — the ref/path didn't resolve.
+      [ "$loc" = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ] \
+        && { echo "  only-in-pypi: $rel"; mism=1; continue; }
+    else
+      [ -f "$REPO/src/$DIST/$rel" ] || { echo "  only-in-pypi: $rel"; mism=1; continue; }
+      loc="$(sha256sum "$REPO/src/$DIST/$rel" | cut -d' ' -f1)"
+    fi
+    [ "$pub" = "$loc" ] || { echo "  DIFFERS: $rel"; mism=1; }
+  done < <(cd "$TGT_SRC" && find . \( -name '*.py' -o -name '*.tcss' \) | sed 's|^\./||' | sort)
+  if [ $mism -eq 0 ]; then
+    ok "published artifact == repo (all $checked files match)"
+  else
+    flag "published artifact differs from local repo (see above)"
+    [ -z "$GITREF" ] && echo "  hint: if the tree has moved past the release, re-run with --git-ref <release-commit>"
+  fi
+fi
+
+# --- 5) Wheel and sdist must ship identical code (both are installable paths).
+note "Wheel vs sdist"
+WHEEL_SRC="$(dirname "$(find "$WORK/target/code" -path '*/claude_swap/oauth.py' -not -path '*/src/*' | head -1)")"
+SDIST_SRC="$(dirname "$(find "$WORK/target/code" -path '*/src/claude_swap/oauth.py' | head -1)")"
+if [ -n "$WHEEL_SRC" ] && [ -n "$SDIST_SRC" ]; then
+  if diff -r "$WHEEL_SRC" "$SDIST_SRC" > "$WORK/whl_sdist.diff" 2>&1; then
+    ok "wheel and sdist ship identical code"
+  else
+    sed 's/^/    /' "$WORK/whl_sdist.diff"
+    flag "wheel and sdist DIFFER — the two install paths deliver different code"
+  fi
+else
+  echo "  could not locate both wheel and sdist trees; skipping"
+fi
+
+# --- 6) Non-code payloads in the wheel (binaries, build hooks).
+note "Non-Python payloads in the wheel"
+if find "$WORK/target/code" -path '*/claude_swap/*' -type f ! -name '*.py' ! -name '*.tcss' \
+     ! -path '*/src/*' | grep . > "$WORK/payloads.txt"; then
+  sed 's|.*/claude_swap/|    |' "$WORK/payloads.txt"
+  flag "wheel ships non-.py/.tcss files inside the package — inspect them"
+else
+  ok "package ships only .py and .tcss (no binaries, no data blobs)"
 fi
 
 # --- Verdict.
