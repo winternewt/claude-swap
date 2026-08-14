@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -11,8 +12,39 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from claude_swap.usage_store import UsageEntry
+
 if TYPE_CHECKING:
     from claude_swap.switcher import ClaudeAccountSwitcher
+
+
+#: Alias validation: letters/digits/-/_/., non-empty, not purely digits (so an
+#: alias can never collide with a slot number in _resolve_account_identifier),
+#: and not leading with '-' (argparse would treat it as an option, making the
+#: alias impossible to pass back into any command once set).
+_ALIAS_RE = re.compile(r"^[a-z0-9_.-]+$")
+
+
+def normalize_alias(name: str) -> str:
+    """Lowercase and validate a proposed alias; raise ValueError if invalid.
+
+    Shared by the CLI (``cswap alias``), ``cswap add --alias``, and import
+    validation so every path enforces identical rules.
+    """
+    normalized = name.strip().lower()
+    if not normalized:
+        raise ValueError("alias cannot be empty")
+    if normalized.isdigit():
+        raise ValueError(f"alias '{name}' cannot be purely numeric (reserved for slot numbers)")
+    if normalized.startswith("-"):
+        raise ValueError(
+            f"alias '{name}' cannot start with '-' (would be read as a command flag)"
+        )
+    if not _ALIAS_RE.match(normalized):
+        raise ValueError(
+            f"alias '{name}' may only contain letters, digits, '-', '_', and '.'"
+        )
+    return normalized
 
 
 class Platform(Enum):
@@ -86,6 +118,47 @@ class AccountInfo:
             "organizationName": self.organization_name,
             "added": self.added,
         }
+
+
+@dataclass(frozen=True)
+class AccountSnapshot:
+    """One managed account as seen by interactive UIs (the TUI).
+
+    ``usage`` is the store-backed :class:`UsageEntry` read model; display
+    code reads ``usage.last_good``/``age_s`` directly (may show old data,
+    annotated with its age), while ``usage.sentinel`` carries derived states
+    ("api key", "token expired", ...) that replace the bars entirely.
+    """
+
+    number: str
+    email: str
+    org_name: str
+    org_uuid: str
+    is_active: bool
+    kind: str  # "oauth" | "api_key"
+    switchable: bool
+    usage: UsageEntry
+    alias: str = ""
+    disabled: bool = False  # held out of auto-rotation (still a valid explicit target)
+
+    @property
+    def display_tag(self) -> str:
+        """Org tag for display: the org name, or 'personal'."""
+        return self.org_name if self.org_name else "personal"
+
+
+@dataclass(frozen=True)
+class AccountsSnapshot:
+    """Coherent one-pass view of every managed account.
+
+    Produced by ``ClaudeAccountSwitcher.accounts_snapshot``: metadata, active
+    detection, and usage entries all come from the same collect pass, so a
+    consumer never sees an account list and usage table that disagree.
+    """
+
+    active_number: str | None
+    accounts: tuple[AccountSnapshot, ...]
+    taken_at: float
 
 
 @dataclass
