@@ -4,155 +4,172 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-08-14
-**Version audited:** `0.25.0` (current stable — what a plain install gets)
-**Previous audit:** 2026-06-25, versions `0.14.0` / `0.15.0b1`
+**Audit date:** 2026-10-08
+**Version audited:** `0.26.0` (current stable — what a plain install gets)
+**Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
-**Method:** re-audit of the `0.15.0b1 → 0.25.0` delta (323 commits, +17,845 /
-−1,156 lines across `src/`), plus byte-for-byte verification of the published
-PyPI artifacts against the git source.
+**Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
+across `src/`, read in full), byte-for-byte verification of the published PyPI
+artifacts against the git source, and a review of `scripts/redflag.sh` itself,
+which turned out to have missed this release's main change (see
+[Blind spots fixed](#blind-spots-fixed-on-2026-10-08)).
 
 ---
 
-## Verdict: ✅ Clean
+## Verdict: ✅ Clean, but a past claim is reversed
 
 No phone-home, no data exfiltration, no backdoor. Safe to expose Claude Code
-OAuth tokens to `0.25.0`.
+OAuth tokens to `0.26.0`.
 
-The headline of this re-audit: **the package roughly tripled in size, and the
-network and execution surface did not grow with it.** 20 new modules — an
-auto-switch engine, a Textual TUI, a macOS menu-bar app, a usage store — added
-exactly *one* new endpoint, on a host that was already trusted. `switcher.py`
-alone gained 5,402 lines containing zero network, subprocess, or eval
-constructs.
+**What changed, and it reverses the 0.25.0 report:** that report said
+claude-swap "installs no persistence". **0.26.0 can install a macOS
+LaunchAgent**, which starts the menu bar at login and restarts it if it
+crashes. It is opt-in, behind one explicit command, and nothing installs it for
+you. See [Persistence](#persistence-new-in-0260-opt-in-macos-only).
 
-**One thing genuinely changed and the previous audit's text is now wrong on
-it:** that report said the tool "runs synchronously and exits, so nothing
-lingers." That is no longer true — see [Background execution](#background-execution-this-is-new)
-below. The behavior is legitimate and user-initiated, but it is new, and it
-polls Anthropic on a timer.
+Everything else is the same as 0.25.0: the same 4 endpoints, and the same
+dependencies. `oauth.py` and `update_check.py`, the only modules that touch the
+network, are unchanged from 0.25.0.
 
 ---
 
-## Network surface — complete, 4 endpoints, all hardcoded literals
+## Network surface — unchanged, 4 endpoints, all hardcoded literals
 
 | Endpoint | Method | What is sent | Source |
 |---|---|---|---|
 | `https://platform.claude.com/v1/oauth/token` | POST | `refresh_token` + Claude Code's public `client_id` — standard OAuth refresh | `oauth.py:18,143` |
 | `https://api.anthropic.com/api/oauth/usage` | GET | `Authorization: Bearer <access_token>` — reads usage % | `oauth.py:366` |
-| `https://api.anthropic.com/api/oauth/profile` | GET | `Authorization: Bearer <access_token>` — **new since last audit** | `oauth.py:249` |
+| `https://api.anthropic.com/api/oauth/profile` | GET | `Authorization: Bearer <access_token>` — resolves whose token it is | `oauth.py:249` |
 | `https://pypi.org/pypi/claude-swap/json` | GET | **nothing** — anonymous, reads only the version field | `update_check.py:16` |
 
 - All four URLs are **hardcoded string constants**, not built from config or
   environment, so they cannot be silently redirected.
-- Only **two modules in the entire package** perform network I/O: `oauth.py`
-  and `update_check.py`. Both use `urllib.request` only. A full-tree grep for
-  `socket`, `requests`, `httpx`, `aiohttp`, `smtplib`, `ftplib`, and
-  `http.client` returns nothing anywhere else.
+- Only **two modules** import network machinery: `oauth.py` and
+  `update_check.py`, both with `urllib.request` only. `redflag.sh` now
+  re-checks this list on every run.
 - Credentials go **only** to Anthropic's two own domains. No `os.environ` value
   feeds any request body, header, or URL.
 
-### The new `/oauth/profile` endpoint
+**New call site, same endpoint:** `add_account` now calls
+`fetch_oauth_profile()` to confirm that the token it is about to store belongs
+to the account named in `.claude.json`. It refuses on a mismatch and proceeds
+on any lookup failure. This is the already-audited `/oauth/profile` request
+(Bearer token out, `{uuid, email, organizationUuid}` back), made at one more
+moment.
 
-`fetch_oauth_profile()` resolves "whose token is this" — it sends the Bearer
-token and nothing else, and reads back `{uuid, email, organizationUuid}`. It
-sends no more than the already-audited usage endpoint does, to the same host,
-and it is strictly advisory: every failure path returns `None` and the caller
-proceeds with pre-existing behavior. No new trust boundary is crossed.
-
-### `truststore` (new dependency)
+### `truststore`
 
 `cli.py:_use_native_tls()` calls the stock `truststore.inject_into_ssl()`,
-delegating certificate verification to the OS-native verifier (SChannel /
-SecureTransport). This **strengthens** TLS verification rather than relaxing
-it — it exists because OpenSSL's flat Windows cert store can let a stale
-expired intermediate shadow a valid chain. On any exception it falls back to
-stdlib `ssl`. No `verify_mode`, `CERT_NONE`, `check_hostname`, or custom CA
-bundle appears anywhere in the tree.
+delegating certificate verification to the OS-native verifier. This
+**strengthens** TLS verification; on any exception it falls back to stdlib
+`ssl`. No `verify_mode`, `CERT_NONE`, `check_hostname`, or custom CA bundle
+appears anywhere in the tree.
 
-## Background execution (this is new)
+## Persistence (new in 0.26.0, opt-in, macOS only)
 
-The previous audit's "no background threads, timers, or lingering processes"
-claim no longer holds. What actually exists now:
+`launch_agent.py` (new, 289 lines) runs the menu bar as a launchd LaunchAgent.
 
-- **`cswap auto`** (`autoswitch.py`, 2,364 lines) — a usage-polling engine that
-  switches accounts before they hit rate limits. `--once` ticks and exits;
-  `--loop` runs a foreground loop that exits cleanly on SIGTERM
-  (`cli.py:711`). Its network activity is exactly the usage/refresh endpoints
-  above, on a backoff-governed schedule (`poll_policy.py`).
-- **Menu-bar app** (`menubar.py`, macOS, `menubar` extra) — `rumps.Timer`
-  refresh ticks plus `daemon=True` worker threads.
-- **Helper threads** — `claude_locks.py` lock-file toucher, TUI worker threads.
-  All `daemon=True`, all in-process.
+- **Only an explicit command installs it:** `cswap menubar --install-service`.
+  A full-tree search at the release commit finds exactly three call sites, all
+  in `cli.py`, behind `--install-service` / `--uninstall-service` /
+  `--service-status`. Plain `cswap menubar`, `cswap upgrade`, first run and
+  every other path leave launchd alone.
+- **What it writes:** `~/Library/LaunchAgents/com.cswap.menubar.plist` with
+  `RunAtLoad` (start at login) and `KeepAlive: {SuccessfulExit: false}`
+  (restart on crash, stay down after a deliberate Quit). It runs
+  `<path to cswap> menubar` with a fixed `PATH`. Logs go to
+  `~/Library/Logs/com.cswap.menubar.{log,err}`. The plist is built with
+  `plistlib`, not string formatting.
+- **What then runs at every login:** the menu bar, which polls the usage and
+  refresh endpoints above on its timer. That is the same network behavior as a
+  foreground `cswap menubar`; it just no longer needs a terminal to stay up.
+- **How to remove it:** `cswap menubar --uninstall-service` boots the job out
+  and deletes the plist.
+- **Minor hardening gap:** `launchctl` is resolved through `PATH`, while
+  `security` is pinned to `/usr/bin/security`. Exploiting that needs write
+  access to a directory early in your own `PATH`, which already means
+  same-user compromise. Worth pinning to `/bin/launchctl`; not a backdoor.
 
-**Crucially, none of this installs persistence.** There is no LaunchAgent, no
-systemd unit, no cron/`schtasks` entry, no login item — a full-tree grep for
-`launchctl`, `LaunchAgents`, `systemctl`, `crontab`, `schtasks`, `RunAtLoad`,
-and `KeepAlive` finds only documentation comments. Every long-running mode is
-started explicitly by the user in the foreground and dies with its process. The
-one `.plist` written is a two-key `Info.plist` (`CFBundleIdentifier`,
-`CFBundleName`) placed beside the Python interpreter so macOS will show rumps
-notifications — not a launch agent, and not in `~/Library/LaunchAgents`.
+The other long-running modes are unchanged from 0.25.0:
 
-The honest summary is: *nothing runs that you did not start, but what you start
-may now legitimately run for hours and poll Anthropic while it does.*
+- **`cswap auto --loop`** is a foreground polling loop that exits on SIGTERM;
+  `--once` ticks and exits.
+- **The menu bar**, when not installed as a service, runs only while its
+  process lives.
+- **Helper threads** are `daemon=True` and in-process.
+
+No systemd unit, cron or `schtasks` entry exists anywhere. On Linux and
+Windows, nothing runs that you did not start.
 
 ## Process / execution surface
 
-- `subprocess` appears in only four modules: `macos_keychain.py` (the system
-  `security` CLI), `update_check.py` (`uv`/`pipx upgrade`), `session.py`
-  (launching `claude`), and `menubar.py` (one `["open", "-R", path]` to reveal
-  a file in Finder). All are hardcoded argument arrays.
-- **No `shell=True` anywhere.** No `eval`, `exec`, `os.system`, `os.popen`,
-  `pickle`, `marshal`, or `__import__` of attacker-controllable input.
-- The published wheel contains **no binaries, no build hooks, and no
-  `setup.py`** — 39 `.py` files, one `.tcss` stylesheet, and metadata. Entry
-  points are the two expected console scripts (`cswap`, `claude-swap` →
-  `cli:main`).
+- `subprocess` appears in **five** modules (four in 0.25.0), all with hardcoded
+  argument arrays:
+  - `macos_keychain.py`: the system `security` CLI.
+  - `update_check.py`: `uv`/`pipx upgrade`.
+  - `session.py`: launching `claude`, via `os.execvpe` on POSIX.
+  - `menubar.py`: `["open", "-R", path]`.
+  - **new:** `launch_agent.py`: `["launchctl", "print"|"bootstrap"|"bootout", …]`.
+- **No `shell=True` anywhere.** No `eval`, builtin `exec`/`compile`,
+  `os.system`, `os.popen`, `pickle`, `marshal`, or `__import__` of
+  attacker-controllable input. `ctypes` is used only in two Windows console and
+  process-liveness helpers (`printer.py`, `process_detection.py`).
+- **The published wheel holds only the package and its `dist-info`:** 40 `.py`
+  files, one `.tcss` stylesheet, and metadata. It has no `.pth`, no binaries
+  and no extra top-level modules. Its entry points are the two expected
+  console scripts (`cswap`, `claude-swap` → `cli:main`).
+- **The sdist builds with stock `hatchling.build`,** with no build hooks and
+  no `setup.py`.
+
+## New environment reads (local only)
+
+`credentials.py` now reads `CLAUDE_CONFIG_DIR` and
+`CLAUDE_SECURESTORAGE_CONFIG_DIR` to pick **which Keychain item** holds the
+active profile's credential. Claude Code stores a custom profile's token under
+a hashed service name, and reading the fixed default name returned another
+account's token. The value only selects a service name passed to the local
+`security` CLI. It never reaches a network request, so the "no env value feeds
+a request" claim still holds.
 
 ## Local state — no tokens on disk beyond the credential store
 
-`usage_store.py` (new, 1,221 lines) persists per-account usage measurements and
-fetch/backoff state to `cache/usage.json`. It stores **no tokens**: account
-identity is carried as `credential_fingerprint()`, a
-`sha256:`-prefixed SHA-256 of the refresh token (`oauth.py:43`), never the
-token itself. Writes go through `atomic_write_json()`, which inherits the
-backup directory's `0600`/`0700` modes.
+`usage_store.py` (unchanged) persists per-account usage measurements and
+fetch/backoff state to `cache/usage.json`. It stores **no tokens**. Account
+identity is carried as `credential_fingerprint()`, a `sha256:`-prefixed
+SHA-256 of the refresh token (`oauth.py:43`). Writes go through
+`atomic_write_json()`, which inherits the backup directory's `0600`/`0700`
+modes.
 
 ## Things that continue to raise confidence
 
 - **`/usr/bin/security` is still pinned by absolute path**; secrets pass via
   stdin, never `argv`.
-- **Auth env scrubbing expanded** from the previous audit — now five variables
-  (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, and
-  two file-descriptor variants) are stripped before `claude` launches
-  (`session.py:193`).
+- **Auth env scrubbing** strips five variables before `claude` launches:
+  `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, and
+  two file-descriptor variants (`session.py:193`).
+- **Account capture got stricter:** `add_account` now refuses a token that
+  resolves to a different account, or one that rotated or changed identity
+  during the check.
 - **Export still strips machine-identity fields** and never auto-uploads;
   import still has explicit path-traversal guards.
-- `base64` remains confined to local `.enc` credential backups —
-  encode-to-disk / decode-from-disk, not obfuscation.
+- `base64` remains confined to local `.enc` credential backups:
+  encode-to-disk and decode-from-disk, not obfuscation.
 - No custom `keyring` backend is registered.
-- Deliberate discipline against network-under-lock, documented and enforced at
-  several call sites ("Must not be called while any credential/config lock is
-  held").
 
-## Dependencies — this is the real expansion
+## Dependencies — unchanged since 0.25.0
 
-The previous audit could say "one runtime dependency." That is no longer true.
+The `Requires-Dist` lines in the 0.25.0 and 0.26.0 wheels are identical.
 
 | Dependency | Scope | Notes |
 |---|---|---|
 | `textual >=8.2.8,<9` | all platforms | TUI framework; pulls `rich`, `markdown-it-py`, `mdit-py-plugins`, `mdurl`, `linkify-it-py`, `uc-micro-py`, `pygments`, `platformdirs`, `typing-extensions` |
 | `truststore >=0.10.4` | all platforms | no transitive deps |
-| `keyring >=25.0.0` | **Windows only** | *narrowed* — was all-platforms, now only for the legacy migration |
+| `keyring >=25.0.0` | **Windows only** | legacy migration only |
 | `rumps >=0.4.0` | `menubar` extra, macOS | pulls `pyobjc-framework-cocoa`, `pyobjc-core` |
 
-Net: ~10 transitive packages on Linux where there were previously ~6, all of
-them mainstream, widely-audited projects with no typosquat lookalikes. Narrowing
-`keyring` to Windows is a genuine reduction in default attack surface for
-Linux/macOS users. Still, **the dependency count is now the largest untrusted
-input to this package** — larger than its own code, from a supply-chain
-perspective.
+The dependency tree is still **the largest untrusted input to this package**,
+larger than its own code from a supply-chain view. This audit does not read
+the dependencies' source.
 
 ---
 
@@ -161,39 +178,38 @@ perspective.
 The audited GitHub source is not automatically what `uv tool install` pulls —
 the PyPI package is published by `realiti4`, and this is the `winternewt` fork.
 
-### `0.25.0` — published == fork source, byte-for-byte
+### `0.26.0` — published == fork source, byte-for-byte
 
-All **40 files** (39 `.py` + `tui/cswap.tcss`) in the published wheel are
-SHA256-identical to `src/claude_swap/` at commit `9f62506`, the 0.25.0 version
-bump (PyPI upload date 2026-08-11 matches the commit date). The **sdist and
-wheel are also identical to each other**, so both install paths deliver the
-same code.
+All **41 files** in the published wheel (40 `.py` + `tui/cswap.tcss`) are
+SHA256-identical to `src/claude_swap/` at commit **`0d2176d`**. The **sdist
+and wheel ship identical package code**. Both downloads were re-hashed and
+matched PyPI's own published digests.
 
 ```
-wheel  sha256: c8854305e4e6165f3112fe187582594d85ba4e1f198ccbe5a0cf6d76b414aaba
-sdist  sha256: e665dbd7249f1211a5bc6df384c10965d78fd950b2cde305e1af93a73c8648d0
+wheel  sha256: 0df6b2345888b8cded6473a8d2f0e39c51da20eaa450c70923b22d66a9502cfe
+sdist  sha256: f47f013ef6275f360a60000f5864f55697d62bb6b483100c4df7296e46a849d7
 ```
 
-Both downloads were re-hashed and matched PyPI's own published digests.
+`0d2176d` is **not** the "version bump" commit (`2d071a7`). The bump was made
+on a local branch that lacked the launchd PR (#258, merged on GitHub three
+minutes earlier). Twelve seconds after the bump, `0d2176d` merged it in, and
+that merge is what was uploaded. Against `2d071a7`, `cli.py` differs and
+`launch_agent.py` is missing. The commit actually shipped is the last one
+before the next bump (`4b570b2`).
 
-> **Note on running `scripts/redflag.sh` against a dirty tree:** the script's
-> `--repo` check compares the published artifact against the *working tree*. The
-> repo currently sits at the unreleased `0.26.0b1`, so that check reports
-> `DIFFERS: credentials.py`. That is an artifact of comparing against unreleased
-> work, not a supply-chain problem — against the actual 0.25.0 release commit,
-> everything matches.
+The 0.25.0 artifacts (`c8854305…`, `e665dbd7…`) were re-hashed in the same run
+and still match PyPI.
 
 ### To run exactly the audited version
 
 ```bash
-uv tool install 'claude-swap==0.25.0'      # current stable — verified clean
+uv tool install 'claude-swap==0.26.0'      # current stable — verified clean
 ```
 
-### Unaudited: `0.26.0b1`
+### Unaudited: `0.27.0b1`
 
-The working tree is at `0.26.0b1`, which is **not published to PyPI** and is
-**not covered by this audit**. Its only source delta vs 0.25.0 is
-`credentials.py`.
+The working tree is at `0.27.0b1`, which is **not published to PyPI** and is
+**not covered by this audit** (11 files, +987 / −93 vs 0.26.0).
 
 ---
 
@@ -201,15 +217,9 @@ The working tree is at `0.26.0b1`, which is **not published to PyPI** and is
 
 - Verification is **per-version**. Any future release is unaudited until
   re-checked — the maintainer can publish a new artifact at any time.
-- **Method disclosure:** at +17,845 lines this was not a line-by-line read of
-  everything, and claiming otherwise would be dishonest. Risk-bearing modules
-  (`oauth.py`, `credentials.py`, `session.py`, `usage_store.py`, `menubar.py`,
-  `settings.py`, `autoswitch.py` lifecycle) were read directly. Pure-rendering
-  code (`tui/*`, `appearance.py`, `printer.py`) and the bulk of `switcher.py`
-  were cleared by exhaustive grep for network, subprocess, eval, obfuscation,
-  and env-harvest constructs — which returned zero hits. The network-surface
-  guarantee rests on that grep being exhaustive over *all* `.py` files, which it
-  is.
+- The 0.25.0 → 0.26.0 delta was read line by line. The ~18k lines it builds on
+  rest on the 0.25.0 audit's method: risk-bearing modules were read, and the
+  rest was cleared by exhaustive grep.
 - This clears phone-home / exfiltration / backdoor concerns. It is not a general
   vulnerability assessment of every edge case in credential handling, and it
   does not audit the transitive dependency tree's own source.
@@ -234,7 +244,7 @@ scripts/redflag.sh 0.27.0 --repo . --git-ref <release-commit>
 
 **Finding the release commit.** The repo publishes no tags, and the
 "version bump" commit is not always what was uploaded: 0.26.0 was bumped at
-`2d071a7`, then a PR merged, and PyPI got `0d2176d`, the last commit before the
+`2d071a7`, a merge followed, and PyPI got `0d2176d`, the last commit before the
 next bump (`4b570b2`). List the bumps with
 `git log --oneline -S 'version = "0.27.0"' -- pyproject.toml`. That gives the
 commit that set the version and the one that moved past it. Try the first;
