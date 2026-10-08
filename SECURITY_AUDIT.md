@@ -5,7 +5,9 @@ backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
 **Audit date:** 2026-10-08
-**Version audited:** `0.26.0` (current stable — what a plain install gets)
+**Versions audited:** `0.26.0` (current stable — what a plain install gets), and
+the fork's `0.27.0b1` at commit `33bb12f` (a git install, see
+[below](#also-audited-fork-0270b1-at-33bb12f))
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
 **Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
@@ -200,16 +202,46 @@ before the next bump (`4b570b2`).
 The 0.25.0 artifacts (`c8854305…`, `e665dbd7…`) were re-hashed in the same run
 and still match PyPI.
 
+### Also audited: fork `0.27.0b1` at `33bb12f`
+
+Not on PyPI; installed straight from the fork. The `0.26.0 → 33bb12f` delta
+(12 files under `src/`, +988 / −94; `pyproject.toml` changes only the version)
+was read in full:
+
+- **Network: no change in what is sent or where.** Both network modules
+  changed. `oauth.py` gained a local access-token fingerprint helper and a
+  stderr redirect. `update_check.py` gained PEP 440 pre-release parsing. They
+  have the same 4 hosts and the same requests.
+- **New subprocess, local and read-only:** `process_detection.py` runs
+  `["ps", "-o", <columns>, "-p", <pid>]` (5 s timeout) to tell a live Claude
+  session from a recycled PID. Like `launchctl`, `ps` is found through `PATH`.
+- **New credential movement, local only:** after a session-mode Claude exits,
+  `switcher.py` copies that session profile's rotated credential into the
+  same account's backup. It runs only for the same account, only when the
+  profile is newer, and only under cswap's lock. It writes through the
+  existing credential store. The copy goes from one local store to another,
+  never out.
+- **New command `import-usage`:** it reads usage percentages from a local
+  JSON file (another machine's `cswap list --json`) and can pause local
+  polling for a bounded time. It handles no tokens.
+- **Unchanged:** dependencies (same `Requires-Dist`), build backend (stock
+  hatchling, no hooks), persistence (only `--install-service`).
+
+**Build check:** a wheel built from `git archive 33bb12f` with `uv build`, the
+same path `uv tool install git+…` takes, holds exactly `src/claude_swap/` at
+that commit (41 files, byte-identical). It also holds `dist-info`, with no
+`.pth` and the two expected console scripts.
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==0.26.0'      # current stable — verified clean
+# or the audited fork commit (pin the full sha; a branch name moves):
+uv tool install --force 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@33bb12f8c72ab2e475cc9646f57aea1ea0779607'
 ```
 
-### Unaudited: `0.27.0b1`
-
-The working tree is at `0.27.0b1`, which is **not published to PyPI** and is
-**not covered by this audit** (11 files, +987 / −93 vs 0.26.0).
+Any commit after `33bb12f` that touches `src/` or `pyproject.toml` is
+**unaudited**.
 
 ---
 
