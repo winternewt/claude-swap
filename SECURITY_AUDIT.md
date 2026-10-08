@@ -216,24 +216,61 @@ The working tree is at `0.26.0b1`, which is **not published to PyPI** and is
 
 ## Re-checking future releases
 
-`scripts/redflag.sh` automates this audit for any version: it verifies the
-published artifact's SHA256 against PyPI metadata, lists every network host
-(flagging any outside the Anthropic/PyPI allowlist), surfaces exec/obfuscation
-constructs, and diffs the security-relevant delta against a baseline.
+`scripts/redflag.sh` automates this audit for any version. It verifies each
+published artifact's SHA256 against PyPI metadata and flags a yanked release.
+It checks the artifact shape: nothing outside the package, no `.pth`, entry
+points only into the package, a stock sdist build backend with no hooks. It
+lists every network host (flagging any outside the Anthropic/PyPI allowlist)
+and which modules import network or process machinery. It surfaces exec,
+obfuscation and persistence constructs. It diffs the code and the runtime
+dependencies against a baseline.
 
 ```bash
 scripts/redflag.sh                          # latest stable vs your installed version
 scripts/redflag.sh 0.27.0                   # a specific version
-scripts/redflag.sh 0.27.0 --baseline 0.25.0 # delta vs this audited version
-
-# Compare against the release commit rather than the working tree. The repo
-# publishes no tags, so pass the "version bump" commit for that release —
-# find it with:  git log --oneline -S 'version = "0.27.0"' -- pyproject.toml
-scripts/redflag.sh 0.27.0 --repo . --git-ref <bump-commit>
+scripts/redflag.sh 0.27.0 --baseline 0.26.0 # delta vs this audited version
+scripts/redflag.sh 0.27.0 --repo . --git-ref <release-commit>
 ```
 
-Exit code `0` = no red flags; `1` = an unknown host, a new risky construct in
-the delta, or a SHA256 mismatch. It is a known-bad-pattern scanner, not a proof
-of safety — always read its output. In particular, its delta check flags *any*
-added line touching network/exec/env constructs, which on a large release will
-fire on benign code: treat that output as a review queue, not a verdict.
+**Finding the release commit.** The repo publishes no tags, and the
+"version bump" commit is not always what was uploaded: 0.26.0 was bumped at
+`2d071a7`, then a PR merged, and PyPI got `0d2176d`, the last commit before the
+next bump (`4b570b2`). List the bumps with
+`git log --oneline -S 'version = "0.27.0"' -- pyproject.toml`. That gives the
+commit that set the version and the one that moved past it. Try the first;
+if it reports `DIFFERS`, try the second one's parent (`<next-bump>^`).
+
+Exit code `0` = no red flags, `1` = at least one red flag, `2` = bad usage.
+A red flag is any of: an unknown host, a new risky construct or dependency vs
+the baseline, an odd artifact shape, a SHA256 mismatch, or **a check that could
+not run** (no baseline, no sdist, a missing wheel). It is a known-bad-pattern
+scanner, not a proof of safety, so always read its output. The delta check
+flags *any* added line touching network/exec/env/persistence constructs, so on
+most releases it exits `1` on benign code by design. Treat that output as a
+review queue, not a verdict.
+
+### Blind spots fixed on 2026-10-08
+
+Re-running the 0.25.0-era script on 0.26.0 showed that it missed a whole new
+module. A review of the script's own logic then found these gaps, all now
+closed:
+
+| Gap | Effect before the fix |
+|---|---|
+| Delta used `diff -r`, not `diff -rN` | A **brand-new file** appeared only as "Only in"; none of its lines were scanned. 0.26.0's new `launch_agent.py` (subprocess + LaunchAgent) passed unflagged. |
+| Delta dropped every line containing `#` | `subprocess.run(x)  # comment` was invisible. Now only comment-only lines are dropped. |
+| `dirname "$(find … \| head -1)"` | When nothing was found, `dirname ""` is `.`: the scan silently ran on the **current directory**, and "baseline not retrievable" could never fire. |
+| `--git-ref` + a file absent at that ref | `git show` failed under `pipefail`, and `set -e` killed the script with no message and no verdict. |
+| Invalid `--repo`, or `--git-ref` without `--repo` | Silently skipped (a git worktree's `.git` is a file, so `-d .git` failed too). Now exits `2`. |
+| Only the package dir was scanned | A `.pth` file, an extra top-level module, or a `.data/` dir in the wheel, and `setup.py`/build hooks in the sdist, all of which execute, were never looked at. |
+| All artifacts extracted into one dir | A second wheel overwrote the first one's files, so only one wheel was effectively checked. |
+| No dependency check | A new `Requires-Dist` brings in code the script never reads. Now diffed against the baseline. |
+| No baseline → delta skipped quietly | Exit `0` with the main check never run. Now a red flag. |
+| Narrow construct regexes | `subprocess`, `socket`, `ctypes`, `importlib`, builtin `compile(`, `zlib`, `launchctl`/`LaunchAgents`/`systemctl`/`crontab` were not looked for at all. |
+| Missing wheel or sdist → "skipping" | A release without an sdist got no cross-check and no flag. Now a red flag. |
+| Verdict said "Safe to install" | Overclaimed. It now says what was checked. |
+
+Still not covered, by design: hosts assembled at runtime rather than written
+as a literal URL. The network-module list is the backstop there: a module
+joining it needs a read. Also not covered: the dependencies' own source, and
+code paths that only a full read would reveal.
