@@ -515,6 +515,9 @@ def _isolate_real_home(request, tmp_path_factory, monkeypatch):
     monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     monkeypatch.delenv("CLAUDE_SECURESTORAGE_CONFIG_DIR", raising=False)
     monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    # The TUI and `cswap auto` host the usage server: never bind the real
+    # $XDG_RUNTIME_DIR socket from a test. Server tests set their own path.
+    monkeypatch.setenv("CSWAP_USAGE_SOCKET", "")
     if "temp_home" in request.fixturenames:
         return  # temp_home provides its own isolated home
     if "tmp_keychain" in request.fixturenames:

@@ -39,5 +39,8 @@ def run(switcher: "ClaudeAccountSwitcher", start: str = "dashboard") -> int:
         drain_stdin()
     except Exception:
         pass
-    app.run()
+    from claude_swap.usage_server import serving
+
+    with serving(switcher):
+        app.run()
     return app.return_code or 0

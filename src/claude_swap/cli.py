@@ -732,7 +732,11 @@ Defaults live in settings.json in the backup root; flags override them.
                     f"{' (dry-run)' if args.dry_run else ''} — Ctrl-C to stop"
                 )
             )
-        sys.exit(engine.run_loop())
+        from claude_swap.usage_server import serving
+
+        with serving(switcher):
+            rc = engine.run_loop()
+        sys.exit(rc)
     except ClaudeSwitchError as e:
         if args.json:
             print(json.dumps(error_envelope(e)))
