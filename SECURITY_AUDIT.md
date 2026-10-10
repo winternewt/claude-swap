@@ -4,9 +4,9 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08
+**Audit date:** 2026-10-08, extended 2026-10-10
 **Versions audited:** `0.26.0` (current stable — what a plain install gets), and
-the fork's `0.27.0b1` at commit `33bb12f` (a git install, see
+the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f` (git installs, see
 [below](#also-audited-fork-0270b1-at-33bb12f))
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
@@ -48,7 +48,9 @@ network, are unchanged from 0.25.0.
   environment, so they cannot be silently redirected.
 - Only **two modules** import network machinery: `oauth.py` and
   `update_check.py`, both with `urllib.request` only. `redflag.sh` now
-  re-checks this list on every run.
+  re-checks this list on every run. (From the fork's `5a2211f` a third,
+  `usage_server.py`, imports `socket` for a local Unix socket only; see
+  [below](#also-audited-fork-0270b1-at-5a2211f).)
 - Credentials go **only** to Anthropic's two own domains. No `os.environ` value
   feeds any request body, header, or URL.
 
@@ -232,15 +234,52 @@ same path `uv tool install git+…` takes, holds exactly `src/claude_swap/` at
 that commit (41 files, byte-identical). It also holds `dist-info`, with no
 `.pth` and the two expected console scripts.
 
+### Also audited: fork `0.27.0b1` at `5a2211f`
+
+One commit on top of `33bb12f` (3 files under `src/`, +240 / −2; the version
+stays `0.27.0b1`). It adds `usage_server.py`, which was read in full, and wraps
+the dashboard and `cswap auto` in it:
+
+- **A local listener, not a network one.** While the dashboard or `cswap auto`
+  runs, a daemon thread answers on a **Unix socket** (`AF_UNIX`; the module
+  has no `AF_INET`): `$XDG_RUNTIME_DIR/claude-usage.sock`, or wherever
+  `CSWAP_USAGE_SOCKET` points (empty turns it off). It is bound under
+  `umask 0o177`, so the file is `0600`, and a test pins that. It is gone when
+  the command exits. No new host, no persistence.
+- **What it hands out:** the active account's number, kind, usage percentages,
+  reset times, fetch and backoff stamps, and `last_error`, which is one of a
+  fixed set of short codes such as `http-429` or `refresh-failed`. It also
+  sends `config_dir`, the version and a timestamp. **No token, no email.**
+  The same user can already read all of this from `cache/usage.json`.
+- **It never fetches for a caller.** Every answer is
+  `SnapshotSource.take(store_only=True)`, which passes an empty `fetch` set,
+  so no account is eligible (`switcher.py` `_collect_usage_entries`) and no
+  request leaves the machine. It caches the answer for 10 s.
+- **It reads nothing from the client:** the server sends one line and closes,
+  so it parses no input. A stale socket file is replaced only if it is a
+  socket (`lstat`, so a symlink is refused). On exit it removes the file only
+  if the inode is still its own.
+- **New environment reads, local only:** `CSWAP_USAGE_SOCKET` and
+  `XDG_RUNTIME_DIR`. They choose a filesystem path, never a request.
+- **Caveat:** if `CSWAP_USAGE_SOCKET` points into a shared directory such as
+  `/tmp`, other users still cannot connect on Linux, because the socket is
+  `0600`. On macOS `XDG_RUNTIME_DIR` is normally unset, so the server is off
+  unless that variable is set.
+
+**Build check:** a wheel built from `git archive 5a2211f` with `uv build` holds
+exactly `src/claude_swap/` at that commit (42 files, byte-identical). It also
+holds `dist-info`, with no `.pth`, the two expected console scripts and the same
+`Requires-Dist`. Subprocess modules are still six; `usage_server.py` has none.
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==0.26.0'      # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@33bb12f8c72ab2e475cc9646f57aea1ea0779607'
+uv tool install --force 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@5a2211f177b2ce61844182e42160bd6499315bc7'
 ```
 
-Any commit after `33bb12f` that touches `src/` or `pyproject.toml` is
+Any commit after `5a2211f` that touches `src/` or `pyproject.toml` is
 **unaudited**.
 
 ---
