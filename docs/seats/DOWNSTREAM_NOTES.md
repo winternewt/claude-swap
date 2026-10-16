@@ -8,7 +8,7 @@ State as of 2026-10-16.
   that it pointed at `d138f8d`. The history is in SECURITY_AUDIT.md's marker table.
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
-- The seat runs on kit v0.1.34; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.38; its watchdog was restarted on that copy by `stop` + `punch-in`.
 
 ## Upstream
 
