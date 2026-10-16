@@ -1,0 +1,4 @@
+[repo]
+id = "claude-swap"
+
+[seat.downstream]
