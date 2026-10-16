@@ -603,6 +603,14 @@ class TestFrameworkBuildWarning:
         msg = menubar.framework_build_warning("Python", "uv", "26.6.2")
         assert "--managed-python" in msg
 
+    def test_remedies_install_the_audited_fork_commit(self):
+        # Fork policy: a reinstall hint never points at unaudited PyPI.
+        from claude_swap.update_check import AUDITED_SOURCE
+
+        for method in ("uv", "pipx"):
+            msg = menubar.framework_build_warning("Python", method, "26.6.2")
+            assert f"'claude-swap[menubar] @ {AUDITED_SOURCE}'" in msg
+
     def test_pipx_is_not_handed_a_uv_command(self):
         # `uv tool install --force` would overwrite pipx's own executable.
         msg = menubar.framework_build_warning("Python", "pipx", "26.6.2")

@@ -245,7 +245,8 @@ On Linux/WSL, set `XDG_DATA_HOME` to override the default location.
 Needs the `menubar` extra (macOS only):
 
 ```bash
-uv tool install 'claude-swap[menubar]'   # or: pipx install 'claude-swap[menubar]'
+uv tool install --force 'claude-swap[menubar] @ git+https://github.com/winternewt/claude-swap.git@audited'
+# or: pipx install --force 'claude-swap[menubar] @ git+https://github.com/winternewt/claude-swap.git@audited'
 cswap menubar
 ```
 

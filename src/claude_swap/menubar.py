@@ -493,15 +493,17 @@ def framework_build_warning(
 
         install_method = _detect_install_method()
 
+    from claude_swap.update_check import AUDITED_SOURCE
+
+    # Fork policy (see update_check): the audited fork commit, never PyPI.
+    spec = f"claude-swap[menubar] @ {AUDITED_SOURCE}"
     if install_method == "uv":
-        remedy = (
-            "  uv tool install --managed-python --force 'claude-swap[menubar]'"
-        )
+        remedy = f"  uv tool install --managed-python --force --reinstall '{spec}'"
     elif install_method == "pipx":
         remedy = (
             "  Reinstall against a non-framework interpreter, e.g. one from "
             "`uv python install 3.13`:\n"
-            "  pipx install --force --python <that python> 'claude-swap[menubar]'"
+            f"  pipx install --force --python <that python> '{spec}'"
         )
     else:
         remedy = (
@@ -534,9 +536,11 @@ def run(switcher) -> int:
         # guard around ``from claude_swap.menubar import run`` can never see a
         # missing extra — the failure lands here at call time. Raise the
         # error type the CLI already renders cleanly instead of a traceback.
+        from claude_swap.update_check import AUDITED_SOURCE
+
         raise ClaudeSwitchError(
             "Menu bar mode requires 'rumps'. "
-            "Install with: pip install 'claude-swap[menubar]'"
+            f"Install with: pip install 'claude-swap[menubar] @ {AUDITED_SOURCE}'"
         ) from e
 
     # rumps never sets an activation policy, so under a framework Python the
