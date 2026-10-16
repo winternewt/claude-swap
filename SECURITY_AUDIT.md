@@ -341,19 +341,29 @@ move it. Pin the full sha (below) to rule that out.
 `Requires-Dist`. The network modules are `oauth.py`, `update_check.py` and
 `usage_server.py` (`AF_UNIX`). The subprocess modules are still six.
 
+**Also `59d9ffb`, on top of `70dde18`:** `menubar.py` only, +9 / −5. The macOS
+framework-build remedy and the missing-`rumps` error now say
+`claude-swap[menubar] @` plus the same `AUDITED_SOURCE` string instead of a PyPI
+name. They are printed text, not commands cswap runs: no subprocess, no new
+host (`github.com` again, through the same constant). A wheel built from
+`git archive 59d9ffb` holds exactly `src/claude_swap/` at that commit (42
+files, byte-identical, no `.pth`, same `Requires-Dist`).
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==0.27.2'      # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@70dde18ec3200e65c9e4fa568fa37b7e0ecc88be'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@59d9ffbecaaeab3b6f654b6a9b0411fd6b2d0d9f'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `70dde18` that touches `src/` or `pyproject.toml` is
-**unaudited**. The `audited` tag points at the commit that recorded this pass;
-it adds only this file on top of `70dde18`.
+Any commit after `59d9ffb` that touches `src/` or `pyproject.toml` is
+**unaudited**. The `audited` tag still points at `d138f8d` (the `70dde18` code
+plus this file). Moving it to `59d9ffb` needs a force-push of the tag, which
+waits on the seats kit granting that one tag. Until then `cswap upgrade`
+installs `d138f8d`, which is audited, just one hint-text commit behind.
 
 ---
 
