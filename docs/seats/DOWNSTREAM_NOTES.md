@@ -4,12 +4,11 @@ State as of 2026-10-16.
 
 ## Marker
 
-- `audited` (a tag) → `d138f8d`: the `70dde18` code plus its audit record. This is what
-  `cswap upgrade` installs, and it is installed on this machine.
-- `main` → `5ba6d52`, gated through `59d9ffb` (menu bar hint text only; see SECURITY_AUDIT.md).
-- **Pending: move the marker to `5ba6d52`.** It is a tag, so moving it needs
-  `git push -f origin refs/tags/audited`, and no seat grant covers a force push. The person chose to
-  wait for the kit to allow a grant for this one tag (2026-10-16), rather than make the marker a branch.
+- `audited` (a tag) → the commit that moved it on 2026-10-16. Its code is `59d9ffb` (gated); before
+  that it pointed at `d138f8d`. The history is in SECURITY_AUDIT.md's marker table.
+- It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
+  commit recorded first.
+- The seat runs on kit v0.1.34; its watchdog was restarted on that copy by `stop` + `punch-in`.
 
 ## Upstream
 

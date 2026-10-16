@@ -360,10 +360,17 @@ uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winter
 ```
 
 Any commit after `59d9ffb` that touches `src/` or `pyproject.toml` is
-**unaudited**. The `audited` tag still points at `d138f8d` (the `70dde18` code
-plus this file). Moving it to `59d9ffb` needs a force-push of the tag, which
-waits on the seats kit granting that one tag. Until then `cswap upgrade`
-installs `d138f8d`, which is audited, just one hint-text commit behind.
+**unaudited**. The `audited` tag points at the commit that records this
+sentence. Its code is `59d9ffb`'s: the commits after it touch only this file,
+`docs/seats/` and `.claude/settings.json`.
+
+**Marker history** (the old commit is recorded here before each move, as the
+seat's grant requires):
+
+| Date | `audited` moved from | to | Code audited |
+|---|---|---|---|
+| 2026-10-16 | (new) | `d138f8d` | `70dde18` |
+| 2026-10-16 | `d138f8d` | the commit adding this row | `59d9ffb` |
 
 ---
 
