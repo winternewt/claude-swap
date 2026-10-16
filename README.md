@@ -325,6 +325,8 @@ Another tool on the machine that wants the active account's usage (a supervisor 
 python3 -c 'import socket; s = socket.socket(socket.AF_UNIX); s.connect("'"$XDG_RUNTIME_DIR"'/claude-usage.sock"); print(s.recv(65536).decode())'
 ```
 
+`scripts/quota_5h.py` is a ready client: it prints the 5-hour window's percentage (`--json`, `--all` for every window), asks this socket first, and fetches from the API itself only when no server is listening.
+
 <details>
 <summary>The answer, the socket's path, turning it off</summary>
 
