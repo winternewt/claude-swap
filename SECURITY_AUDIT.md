@@ -4,10 +4,12 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08, extended 2026-10-10
-**Versions audited:** `0.26.0` (current stable — what a plain install gets), and
-the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f` (git installs, see
-[below](#also-audited-fork-0270b1-at-33bb12f))
+**Audit date:** 2026-10-08, extended 2026-10-10 and 2026-10-16
+**Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2` (current stable
+on PyPI, see [below](#also-audited-02700272-and-fork-0280b1-at-70dde18));
+the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, and its `0.28.0b1` at
+`70dde18` (git installs, which `cswap upgrade` now installs through the
+`audited` tag)
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
 **Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
@@ -271,16 +273,87 @@ exactly `src/claude_swap/` at that commit (42 files, byte-identical). It also
 holds `dist-info`, with no `.pth`, the two expected console scripts and the same
 `Requires-Dist`. Subprocess modules are still six; `usage_server.py` has none.
 
+### Also audited: `0.27.0`–`0.27.2` and fork `0.28.0b1` at `70dde18`
+
+Upstream tagged three releases. The fork merged upstream at `a410e87`, which
+also brings in upstream's `0.28.0b1` version bump (`8fdc89a`, `pyproject.toml`
+and `uv.lock` only). It then added one commit of its own, `70dde18`.
+
+**Upstream delta, read in full:** `3a4e5c1` (the base the `5a2211f` audit
+covered) `→ 8fdc89a`, 9 files under `src/`, +209 / −70. No new host, no new
+request, no new subprocess, no dependency change:
+
+- `credentials.py`, `transfer.py`, `tui/modals.py`: any bare `sk-ant-…` value
+  now counts as an API key unless it has an OAuth prefix (`sk-ant-oat`,
+  `sk-ant-ort`), so personal `sk-ant-usr…` keys register as keys (#465). This
+  changes classification only; the token stays local.
+- `switcher.py`: `_write_json` writes through `tempfile.mkstemp`, so the temp
+  file is `0600` from the start instead of umask-mode until a later `chmod`
+  (a small hardening). Session-credential adoption now **refuses** to write a
+  profile's credential into the backup when the profile's identity cannot be
+  read, and a switch refuses rather than activate a consumed generation.
+- `session.py`: `~/.claude/rules` joins the items symlinked into session
+  profiles. For a relative symlinked profile, the Keychain service lookup also
+  tries the normalised target path, but only when it is the same directory
+  (`os.path.samefile`).
+- `paths.py`: follows Claude Code 2.1.299's rule for choosing between
+  `.config.json` and `.claude.json`. `usage_store.py`: the alternate-poll pick
+  now goes by last attempt, which changes the order only.
+
+**Published `0.27.0`, `0.27.1`, `0.27.2` == their tags.** `redflag.sh <v>
+--baseline 0.26.0 --repo . --git-ref v<v>` on each: the PyPI SHA256s verify,
+all 41 package files match the tag, the wheel and sdist ship identical code,
+the build is stock hatchling with no hooks, `Requires-Dist` is unchanged, and
+the hosts are the known ones. Its one red flag on each is the five delta lines
+of the `ps` probe in `process_detection.py`, already cleared at `33bb12f`
+above. The tags are ancestors of `upstream/main`, so the delta above covers
+all three.
+
+| Release | Artifact | SHA256 |
+|---|---|---|
+| `0.27.0` | wheel | `b57957241282934e91e7a03086301b5ee7dd6233721e163fb161ac48a2aea6d0` |
+| `0.27.0` | sdist | `4f1f62bd3dd8d92421ede39b547177ffa1eb4dc70e14dc23a1d583d6c8a9a6ca` |
+| `0.27.1` | wheel | `fee45daaf8e653ab66c31ebda10a641d4d2027353cb32839f9f75f449b85f310` |
+| `0.27.1` | sdist | `08a80d84d0fad2644ea1145e2d029f79861912965d7f8e35e2c756fece093447` |
+| `0.27.2` | wheel | `5d404d8d9c49f3689287ffa4213fd2c55fe683e5a2957abd9856f83bce6c6c9d` |
+| `0.27.2` | sdist | `8ca851fd891fb80099579c82f39b12b7ab8fc0664a5ed49d0a9ea01d77100c81` |
+
+**Fork commit `70dde18`: `cswap upgrade` installs the audited commit.**
+`update_check.py` no longer runs `uv tool upgrade` / `pipx upgrade`, which
+follow PyPI. It runs `uv tool install --force --reinstall 'claude-swap @
+git+https://github.com/winternewt/claude-swap.git@audited'` (or `pipx install
+--force` with the same URL), as a hardcoded argument array with no shell.
+That adds **one literal host, `github.com`**, which `redflag.sh` will report
+as unknown on this fork. That is expected. cswap itself sends nothing there:
+the URL is an argument to uv or pipx, which fetch the fork's code on an
+explicit `cswap upgrade` only. The PyPI version check is unchanged (anonymous
+GET to `pypi.org`). Its message now says a newer release is waiting for an
+audit.
+
+**Trust moves to the tag.** `@audited` is whatever the tag points at when
+`cswap upgrade` runs. Only the fork's owner can move it, and only after an
+audit pass. The tag is not a pin: anyone with push access to the fork could
+move it. Pin the full sha (below) to rule that out.
+
+**Build check:** a wheel built from `git archive 70dde18` holds exactly
+`src/claude_swap/` at that commit (42 files, byte-identical). It also holds
+`dist-info`, with no `.pth`, the two expected console scripts and the same
+`Requires-Dist`. The network modules are `oauth.py`, `update_check.py` and
+`usage_server.py` (`AF_UNIX`). The subprocess modules are still six.
+
 ### To run exactly the audited version
 
 ```bash
-uv tool install 'claude-swap==0.26.0'      # current stable — verified clean
+uv tool install 'claude-swap==0.27.2'      # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@5a2211f177b2ce61844182e42160bd6499315bc7'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@70dde18ec3200e65c9e4fa568fa37b7e0ecc88be'
+# or follow the fork's audited tag (what `cswap upgrade` runs):
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `5a2211f` that touches `src/` or `pyproject.toml` is
-**unaudited**.
+Any commit after `70dde18` that touches `src/` or `pyproject.toml` is
+**unaudited**. The `audited` tag points at the commit that recorded this pass;
+it adds only this file on top of `70dde18`.
 
 ---
 
