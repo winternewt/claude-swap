@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from claude_swap.update_check import (
+    AUDITED_SOURCE,
     CACHE_TTL,
     _detect_install_method,
     check_for_update,
@@ -233,7 +234,8 @@ class TestCheckForUpdateMessage:
 
         assert result is not None
         assert "cswap upgrade" in result
-        assert "uv tool upgrade" not in result
+        assert "not yet audited" in result
+        assert "uv tool" not in result
 
     @patch("claude_swap.update_check.sys.platform", "win32")
     @patch("claude_swap.update_check.urllib.request.urlopen")
@@ -248,7 +250,7 @@ class TestCheckForUpdateMessage:
         result = check_for_update("0.3.2")
 
         assert result is not None
-        assert "pipx upgrade claude-swap" in result
+        assert f"pipx install --force {AUDITED_SOURCE}" in result
         assert "cswap upgrade" not in result
 
     @patch("claude_swap.update_check.urllib.request.urlopen")
@@ -264,30 +266,35 @@ class TestCheckForUpdateMessage:
 
         assert result is not None
         assert "cswap upgrade` for upgrade instructions" in result
-        assert "uv tool upgrade" not in result
-        assert "pipx upgrade" not in result
+        assert "uv tool" not in result
+        assert "pipx" not in result
 
 
 @patch("claude_swap.update_check.sys.platform", "linux")
 class TestRunSelfUpgrade:
     @patch("claude_swap.update_check.subprocess.run")
     @patch("claude_swap.update_check._detect_install_method", return_value="uv")
-    def test_uv_invokes_uv_tool_upgrade(self, mock_detect, mock_run):
+    def test_uv_installs_the_audited_fork_commit(self, mock_detect, mock_run):
+        # Fork policy: never `uv tool upgrade`, which follows unaudited PyPI.
         mock_run.return_value = MagicMock(returncode=0)
 
         assert run_self_upgrade() == 0
         mock_run.assert_called_once_with(
-            ["uv", "tool", "upgrade", "claude-swap"], check=False
+            ["uv", "tool", "install", "--force", "--reinstall",
+             "claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited"],
+            check=False,
         )
 
     @patch("claude_swap.update_check.subprocess.run")
     @patch("claude_swap.update_check._detect_install_method", return_value="pipx")
-    def test_pipx_invokes_pipx_upgrade(self, mock_detect, mock_run):
+    def test_pipx_installs_the_audited_fork_commit(self, mock_detect, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
 
         assert run_self_upgrade() == 0
         mock_run.assert_called_once_with(
-            ["pipx", "upgrade", "claude-swap"], check=False
+            ["pipx", "install", "--force",
+             "git+https://github.com/winternewt/claude-swap.git@audited"],
+            check=False,
         )
 
     @patch("claude_swap.update_check.subprocess.run")
@@ -305,9 +312,10 @@ class TestRunSelfUpgrade:
         assert run_self_upgrade() == 1
         mock_run.assert_not_called()
         err = capsys.readouterr().err
-        assert "uv tool upgrade claude-swap" in err
-        assert "pipx upgrade claude-swap" in err
-        assert "pip install --upgrade claude-swap" in err
+        assert f"uv tool install --force --reinstall 'claude-swap @ {AUDITED_SOURCE}'" in err
+        assert f"pipx install --force {AUDITED_SOURCE}" in err
+        assert f"pip install --force-reinstall '{AUDITED_SOURCE}'" in err
+        assert "upgrade claude-swap" not in err
 
     @patch(
         "claude_swap.update_check.subprocess.run", side_effect=FileNotFoundError
@@ -330,7 +338,7 @@ class TestRunSelfUpgradeWindows:
         assert run_self_upgrade() == 1
         mock_run.assert_not_called()
         out = capsys.readouterr().out
-        assert "uv tool upgrade claude-swap" in out
+        assert f"uv tool install --force --reinstall 'claude-swap @ {AUDITED_SOURCE}'" in out
 
     @patch("claude_swap.update_check.subprocess.run")
     @patch("claude_swap.update_check._detect_install_method", return_value="pipx")
@@ -338,7 +346,7 @@ class TestRunSelfUpgradeWindows:
         assert run_self_upgrade() == 1
         mock_run.assert_not_called()
         out = capsys.readouterr().out
-        assert "pipx upgrade claude-swap" in out
+        assert f"pipx install --force {AUDITED_SOURCE}" in out
 
     @patch("claude_swap.update_check.subprocess.run")
     @patch("claude_swap.update_check._detect_install_method", return_value=None)
@@ -346,6 +354,7 @@ class TestRunSelfUpgradeWindows:
         assert run_self_upgrade() == 1
         mock_run.assert_not_called()
         err = capsys.readouterr().err
-        assert "uv tool upgrade claude-swap" in err
-        assert "pipx upgrade claude-swap" in err
-        assert "pip install --upgrade claude-swap" in err
+        assert f"uv tool install --force --reinstall 'claude-swap @ {AUDITED_SOURCE}'" in err
+        assert f"pipx install --force {AUDITED_SOURCE}" in err
+        assert f"pip install --force-reinstall '{AUDITED_SOURCE}'" in err
+        assert "upgrade claude-swap" not in err

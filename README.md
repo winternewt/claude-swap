@@ -27,11 +27,14 @@ uv run cswap help
 
 ### Updating
 
+On this fork, an upgrade installs the commit the `audited` tag points at (the last one
+[SECURITY_AUDIT.md](SECURITY_AUDIT.md) covered), never an unaudited PyPI release:
+
 ```bash
-cswap upgrade          # uv/pipx installs on macOS/Linux: auto-detects and upgrades
+cswap upgrade          # uv/pipx installs on macOS/Linux: auto-detects and installs the audited commit
 # or run your installer directly:
-uv tool upgrade claude-swap
-pipx upgrade claude-swap
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
+pipx install --force git+https://github.com/winternewt/claude-swap.git@audited
 ```
 
 ## Usage
@@ -200,7 +203,7 @@ cswap unclaimed                 # List stashed credential entries (slot + why th
 cswap unclaimed --purge ID      # Drop one (deletes its bytes; recover with /login + `cswap add`)
 cswap tui                       # Interactive dashboard (also: bare `cswap`)
 cswap watch                     # Dashboard, opened on the live watch page
-cswap upgrade                   # Upgrade claude-swap to the latest version
+cswap upgrade                   # Install the fork's last audited commit
 cswap purge                     # Remove all claude-swap data
 ```
 

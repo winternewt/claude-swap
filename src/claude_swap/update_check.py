@@ -17,6 +17,21 @@ CACHE_PATH = CACHE_DIR / "update_check.json"
 CACHE_TTL = 24 * 3600  # 24 hours
 PYPI_URL = "https://pypi.org/pypi/claude-swap/json"
 
+# Fork policy: an upgrade installs this fork's last audited commit, never a
+# PyPI release nobody has audited yet. The ``audited`` tag is moved to the
+# commit each SECURITY_AUDIT.md pass covered; PyPI is still checked, so a new
+# upstream release shows up as one waiting for that audit.
+AUDITED_SOURCE = "git+https://github.com/winternewt/claude-swap.git@audited"
+UPGRADE_COMMANDS = {
+    "uv": ["uv", "tool", "install", "--force", "--reinstall",
+           f"claude-swap @ {AUDITED_SOURCE}"],
+    "pipx": ["pipx", "install", "--force", AUDITED_SOURCE],
+}
+
+
+def _shell_command(cmd: list[str]) -> str:
+    return " ".join(f"'{a}'" if " " in a else a for a in cmd)
+
 _VERSION_RE = re.compile(
     r"(\d+(?:\.\d+)*)(?:[-_.]?(alpha|beta|preview|pre|rc|a|b|c)[-_.]?(\d+)?)?",
     re.IGNORECASE,
@@ -116,22 +131,19 @@ def check_for_update(current_version: str) -> str | None:
 
         if latest_version and _is_newer(latest_version, current_version):
             method = _detect_install_method()
-            direct = {
-                "uv": "uv tool upgrade claude-swap",
-                "pipx": "pipx upgrade claude-swap",
-            }.get(method or "")
-            if direct and sys.platform != "win32":
+            cmd = UPGRADE_COMMANDS.get(method or "")
+            if cmd and sys.platform != "win32":
                 # cswap upgrade actually performs the upgrade here.
-                hint = "Run `cswap upgrade` to update."
-            elif direct:
+                hint = "`cswap upgrade` installs the last audited fork commit."
+            elif cmd:
                 # Windows: cswap upgrade only prints, so point at the real command.
-                hint = f"Run `{direct}` to update."
+                hint = f"`{_shell_command(cmd)}` installs the last audited fork commit."
             else:
                 # Unknown install method: cswap upgrade shows manual instructions.
                 hint = "Run `cswap upgrade` for upgrade instructions."
             return (
-                f"A newer version of claude-swap is available ({latest_version}). "
-                f"You are using {current_version}. {hint}"
+                f"claude-swap {latest_version} is on PyPI, not yet audited on this "
+                f"fork. You are using {current_version}. {hint}"
             )
         return None
     except Exception:
@@ -147,20 +159,16 @@ def run_self_upgrade() -> int:
     from claude_swap.printer import accent, error
 
     method = _detect_install_method()
-    commands = {
-        "uv": ["uv", "tool", "upgrade", "claude-swap"],
-        "pipx": ["pipx", "upgrade", "claude-swap"],
-    }
-    cmd = commands.get(method or "")
+    cmd = UPGRADE_COMMANDS.get(method or "")
     if cmd is None:
         error(
             "Could not detect install method (looked for uv tool / pipx).\n"
             f"  sys.prefix:     {sys.prefix}\n"
             f"  sys.executable: {sys.executable}\n"
-            "To upgrade manually, run one of:\n"
-            "  uv tool upgrade claude-swap\n"
-            "  pipx upgrade claude-swap\n"
-            f"  {sys.executable} -m pip install --upgrade claude-swap\n"
+            "To install the last audited fork commit manually, run one of:\n"
+            f"  {_shell_command(UPGRADE_COMMANDS['uv'])}\n"
+            f"  {_shell_command(UPGRADE_COMMANDS['pipx'])}\n"
+            f"  {sys.executable} -m pip install --force-reinstall '{AUDITED_SOURCE}'\n"
             "If you installed with `pip install -e .`, use `git pull` instead."
         )
         return 1
@@ -170,7 +178,7 @@ def run_self_upgrade() -> int:
     # though the package itself updates. cswap exits right after this, which
     # releases the lock, so the user can just run the command themselves.
     if sys.platform == "win32":
-        print(f"To upgrade claude-swap on Windows, run:\n  {accent(' '.join(cmd))}")
+        print(f"To upgrade claude-swap on Windows, run:\n  {accent(_shell_command(cmd))}")
         return 1
 
     try:
