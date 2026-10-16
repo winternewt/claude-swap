@@ -2,3 +2,6 @@
 id = "claude-swap"
 
 [seat.downstream]
+
+[seat.downstream.zulip]
+pool = "~/.config/agent-seat-blueprints/zulip/pool"
