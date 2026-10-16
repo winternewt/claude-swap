@@ -17,5 +17,5 @@ State as of 2026-10-16.
 
 ## Open with the person
 
-- A trust register (`docs/TRUST.md`): the base asks once, because this repo handles OAuth tokens.
-  Not asked yet.
+- Nothing. The trust register (`docs/TRUST.md`) was started on 2026-10-16: upstream is `audit`, the seats kit
+  is `trusted`.
