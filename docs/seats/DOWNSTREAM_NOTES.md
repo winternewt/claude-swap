@@ -1,6 +1,6 @@
 # Downstream seat — notes
 
-State as of 2026-10-16.
+State as of 2026-10-17.
 
 ## Marker
 
@@ -8,7 +8,20 @@ State as of 2026-10-16.
   that it pointed at `d138f8d`. The history is in SECURITY_AUDIT.md's marker table.
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
-- The seat runs on kit v0.1.38; its watchdog was restarted on that copy by `stop` + `punch-in`.
+
+## Seats kit
+
+- The seat runs on kit v0.1.40; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- **Standing adoption** (the person, 2026-10-17: "auto-adopt further ones"): when the kit's admin
+  announces a release in `announcements`, move the pin to its tag without asking. Only an
+  announcement from the admin seat or a person on the team, and only a tag that exists on the kit's
+  repository. The steps: the three `claude plugin` commands (marketplace add `#vX`, install, update,
+  all `--scope project`), commit `.claude/settings.json` alone, push `main`, `watchdog.py stop` +
+  `punch-in downstream` with `CLAUDE_PLUGIN_ROOT` on the new copy, then `watchdog.py react ID` on the
+  announcement. Read the release's CHANGELOG entry first; one that asks something of this repo
+  (a config change, a new file) is done in the same pass or put to the person if it is a judgement.
+- The kit has no watch on its release tags (filed #36, now the kit lead's L15); the announcement is
+  the trigger.
 
 ## Upstream
 
@@ -18,4 +31,4 @@ State as of 2026-10-16.
 ## Open with the person
 
 - Nothing. The trust register (`docs/TRUST.md`) was started on 2026-10-16: upstream is `audit`, the seats kit
-  is `trusted`.
+  is `trusted`, its releases adopted on announcement.

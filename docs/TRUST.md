@@ -21,7 +21,7 @@ one itself.
 | Source | Standing | Why | Decided |
 |---|---|---|---|
 | `upstream`, `github.com/realiti4/claude-swap`: its commits, its tags and its PyPI releases | **audit** | Third-party code that handles the tokens. Every release is read in full and its artifacts are checked against the source before a merge or an install. That pass is the downstream seat's (`docs/seats/DOWNSTREAM.md`), and its record is `SECURITY_AUDIT.md`. | the person, 2026-10-16 |
-| The seats kit, `github.com/winternewt/agent-seat-blueprints`, at the tag `.claude/settings.json` pins | **trusted** | The person's own repository, pinned by tag. Its hooks and watchdog run in every session here, and a pin move is a commit the person approves. | the person, 2026-10-16 |
+| The seats kit, `github.com/winternewt/agent-seat-blueprints`, at the tag `.claude/settings.json` pins | **trusted** | The person's own repository, pinned by tag. Its hooks and watchdog run in every session here. Each new release is adopted without asking: the pin moves to its tag when the kit's admin announces it (the person, 2026-10-17: "auto-adopt further ones"). | the person, 2026-10-16; standing adoption 2026-10-17 |
 
 ## Outside the rule
 
