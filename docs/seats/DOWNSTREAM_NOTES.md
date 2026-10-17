@@ -11,7 +11,7 @@ State as of 2026-10-17.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.43; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.51; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption** (the person, 2026-10-17: "auto-adopt further ones"): when the kit's admin
   announces a release in `announcements`, move the pin to its tag without asking. Only an
   announcement from the admin seat or a person on the team, and only a tag that exists on the kit's
