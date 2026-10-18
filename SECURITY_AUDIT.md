@@ -445,3 +445,36 @@ Still not covered, by design: hosts assembled at runtime rather than written
 as a literal URL. The network-module list is the backstop there: a module
 joining it needs a read. Also not covered: the dependencies' own source, and
 code paths that only a full read would reveal.
+
+# The seats kit's pin moves
+
+The seats kit (`github.com/winternewt/agent-seat-blueprints`) runs in every session here: its
+hooks, its seat watchdog, its quota watcher, and the instructions it gives each session. Its
+threat model and standing are in `docs/TRUST.md`. Every move of its pin
+(`.claude/settings.json`) passes `scripts/kitgate.py OLD NEW` first, and is recorded below.
+
+What the gate reads: the kit's git source at both tags, from its own bare mirror
+(`.kitgate/kit.git`, fetched without `--force`, so a moved tag stops it). It skips the kit's docs,
+tests, git hooks and own agent settings, and other roles' instructions. Then it lists four things:
+
+- every network host that is new;
+- a change to the runtime dependencies (the kit has none);
+- every line that is new on the watched paths. **Hard:** persistence, obfuscation, piping into a
+  shell, secrets that are not the kit's own (`.ssh`, `gh`'s hosts file, a keyring, this tool's
+  store, a refresh token). **Read:** credentials, network clients, endpoint overrides, a shell given
+  a string;
+- each new file, and any change to `hooks/hooks.json`, the plugin manifest or an MCP config.
+
+With `--copy`, it also holds the installed copy byte for byte against the tag. Lines are compared
+as sets, so a line that only moved between files is not listed again. It does not see a host
+built at run time, or a leak through a client and host the kit already uses by a line none of its
+patterns name. Its patterns live in this repository, so no kit release can change them.
+
+Calibration, 2026-10-18: of the 29 releases from v0.1.39 to v0.1.67, taken one by one, 15 are
+clean, 11 list 1 to 9 lines to read, and 3 stop hard. All 3 hard stops are the same text: the usage
+line of the kit's new-machine bootstrap (`curl … | sh -s <seat>`), a script the person runs by hand
+on a new machine, which nothing here runs.
+
+| Date | From → to | Gate | What was read | Verdict |
+|---|---|---|---|---|
+| 2026-10-18 | v0.1.38 → v0.1.67 (adopted before the gate, read after) | 4 hard (the bootstrap's usage text), 33 read, 8 new files | the Zulip driver's new `upload` (a multipart POST to the same server with the seat's own key), `quota.py`'s socket lookup (gains `CSWAP_USAGE_SOCKET`, asked from here as kit #34; the token path and URL are unchanged), the new `trunk-review` agent (sends a `git archive` of tracked files to Cursor's CLI, read-only, only when called), `drivers/github/issues.py`'s base64 (the contents API), `seats.py`'s zuliprc `site=` rewrite (the organisation's rename, #58), `decisions.py`'s secret scrubber, `bin/release`'s `sh -c` (the kit's own release, run in the kit's repo); the 8 new files' headers: none runs here unless called (a new machine's onboarding and its bootstrap, the kit's release, the desk's stats, the lead's plan watcher, a file-inbox watcher, a local report over the message ledger) | Clean for this repo: nothing sends a login anywhere new. The bootstrap text is the person's call (asked 2026-10-18). Installed copy == tag. |

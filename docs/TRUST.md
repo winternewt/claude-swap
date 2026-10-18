@@ -21,7 +21,36 @@ one itself.
 | Source | Standing | Why | Decided |
 |---|---|---|---|
 | `upstream`, `github.com/realiti4/claude-swap`: its commits, its tags and its PyPI releases | **audit** | Third-party code that handles the tokens. Every release is read in full and its artifacts are checked against the source before a merge or an install. That pass is the downstream seat's (`docs/seats/DOWNSTREAM.md`), and its record is `SECURITY_AUDIT.md`. | the person, 2026-10-16 |
-| The seats kit, `github.com/winternewt/agent-seat-blueprints`, at the tag `.claude/settings.json` pins | **trusted** | The person's own repository, pinned by tag. Its hooks and watchdog run in every session here. Each new release is adopted without asking: the pin moves to its tag when the kit's admin announces it (the person, 2026-10-17: "auto-adopt further ones"). | the person, 2026-10-16; standing adoption 2026-10-17 |
+| The seats kit, `github.com/winternewt/agent-seat-blueprints`, at the tag `.claude/settings.json` pins | **trusted, behind a gate** | The person's own repository, but its releases are cut by agent seats with no person reading them, and its code runs here beside the logins. Each pin move passes `scripts/kitgate.py`; see the threat model below. | the person, 2026-10-16; the gate 2026-10-18 |
+
+## The seats kit: threat model
+
+- **What it runs here.** Hooks on every session event (start, each prompt, stop, compaction, a
+  message to another session), through `bin/py` and `classes/base/watchdog.py`. The seat's watchdog
+  in the background, with its Zulip driver. The quota watcher (`drivers/claude-code/quota.py`),
+  which reads `~/.claude/.credentials.json` and sends the access token to `api.anthropic.com`, a URL
+  that `QUOTA_URL` can override. Its skills, commands and agents when called. And its instructions
+  (the base, the downstream role, its rules), which steer every session here.
+- **The harm that matters: a login leaving the machine.** The kit already holds everything that
+  would take: a token in hand, clients that send (Zulip, GitHub through `gh`, the usage endpoint),
+  and sessions that follow its instructions. A release could turn any of them into a leak without
+  a new dependency or a new host.
+- **Who writes it.** The person's own repository, but agent seats write and tag its releases
+  (`bin/release`); about 25 came out from 2026-10-16 to 2026-10-18.
+- **The control.** Before each pin move, `scripts/kitgate.py OLD NEW` (record and method in
+  SECURITY_AUDIT.md, "The seats kit's pin moves"):
+  - **clean** (exit 0): the pin moves without asking, and the move is reported;
+  - **read** (exit 1): the seat reads every listed hunk in full, records its verdict, and puts the
+    move to the person; the pin stays meanwhile;
+  - **hard** (exit 4) or **unknown** (exit 3): the pin stays, and the person decides with the hunks.
+
+  After the move, `kitgate.py NEW NEW --copy <installed copy>` holds what the client installed
+  against the tag, before the watchdog restarts on it or a session reloads it. A mismatch moves the
+  pin back.
+- **The risk accepted.** What the gate's patterns do not name: a host built at run time, a leak
+  through a client and host the kit already uses by a line no pattern matches, an instruction
+  changed in a file outside the set a session here loads. Also the minutes between the client's
+  `plugin update` and the `--copy` check, in which a newly started session would load the new copy.
 
 ## Outside the rule
 

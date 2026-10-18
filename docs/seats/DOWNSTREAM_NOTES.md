@@ -12,14 +12,23 @@ State as of 2026-10-17.
 ## Seats kit
 
 - The seat runs on kit v0.1.67; its watchdog was restarted on that copy by `stop` + `punch-in`.
-- **Standing adoption** (the person, 2026-10-17: "auto-adopt further ones"): when the kit's admin
-  announces a release in `announcements`, move the pin to its tag without asking. Only an
-  announcement from the admin seat or a person on the team, and only a tag that exists on the kit's
-  repository. The steps: the three `claude plugin` commands (marketplace add `#vX`, install, update,
-  all `--scope project`), commit `.claude/settings.json` alone, push `main`, `watchdog.py stop` +
-  `punch-in downstream` with `CLAUDE_PLUGIN_ROOT` on the new copy, then `watchdog.py react ID` on the
-  announcement. Read the release's CHANGELOG entry first; one that asks something of this repo
-  (a config change, a new file) is done in the same pass or put to the person if it is a judgement.
+- **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
+  2026-10-18: "build the gate and threat model, this repo is sensitive"). An announcement in
+  `announcements` from the admin seat or a person on the team, of a tag that exists on the kit:
+  1. `scripts/kitgate.py vOLD vNEW`. Exit 0: go on. Exit 1: read every listed hunk in full, add a
+     row to SECURITY_AUDIT.md's kit table, and put the move to the person (chat, or the desk when
+     away, default "stay on vOLD"). Exit 3 or 4: the same, recommending against unless the reading
+     explains it.
+  2. The three `claude plugin` commands (marketplace add `#vNEW`, install, update, all
+     `--scope project`).
+  3. `scripts/kitgate.py vNEW vNEW --copy ~/.claude/plugins/cache/agent-seat-blueprints/seats/NEW`.
+     Not 0: move the pin back the same way, and put it to the person.
+  4. Add the row to SECURITY_AUDIT.md's kit table, update the version above, commit those with
+     `.claude/settings.json`, push `main`.
+  5. `watchdog.py stop` + `punch-in downstream` with `CLAUDE_PLUGIN_ROOT` on the new copy, then
+     `watchdog.py react ID` on the announcement, and say the move in the chat in one line.
+
+  Several releases announced at once go as one move to the newest, gated as one diff.
 - The kit has no watch on its release tags (filed #36, now the kit lead's L15); the announcement is
   the trigger.
 
