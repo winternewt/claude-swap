@@ -42,8 +42,9 @@ KIT_URL = "https://github.com/winternewt/agent-seat-blueprints.git"
 ROOT = Path(__file__).resolve().parent.parent
 MIRROR = ROOT / ".kitgate" / "kit.git"
 
-# Not loaded by a session here: the kit's own docs, tests, git hooks and agent settings.
-SKIP_DIRS = ("docs/", "tests/", ".githooks/", ".cursor/", ".claude/")
+# Not loaded by a session here: the kit's own docs, tests and agent settings. Its git hooks are
+# scanned: since v0.1.71 the plugin's forge-gate hook runs .githooks/pre-commit.d/10-abs-paths.
+SKIP_DIRS = ("docs/", "tests/", ".cursor/", ".claude/")
 SKIP_FILES = {"CLAUDE.md", "AGENTS.md", "README.md", "LICENSE", ".gitattributes", ".gitignore",
               ".cursorignore", ".blueprints.toml", ".leak_allow.template", ".leak_words.template"}
 # Instructions a session here loads: the base, this repo's role, and the plugin's skills, commands,
