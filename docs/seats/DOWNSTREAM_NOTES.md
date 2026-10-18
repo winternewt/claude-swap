@@ -39,7 +39,7 @@ State as of 2026-10-17.
 
 ## Open with the person
 
-- Desk #42 (2026-10-18, S3): move the kit pin from v0.1.67 to v0.1.70? The gate stopped hard on
+- Desk #42 (2026-10-18, S3): move the kit pin from v0.1.67 to v0.1.71 (amended from v0.1.70)? The gate stopped hard on
   the new-machine setup line (`… | sh -s <seat>`, printed for the person, run by no one here) in
   v0.1.67 and v0.1.70, and v0.1.68 needed a read (clean, SECURITY_AUDIT.md's kit table). Default
   while unanswered: stay on v0.1.67, adopt nothing.
