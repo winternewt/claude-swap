@@ -11,7 +11,7 @@ State as of 2026-10-17.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.67; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.79; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
   2026-10-18: "build the gate and threat model, this repo is sensitive"). An announcement in
   `announcements` from the admin seat or a person on the team, of a tag that exists on the kit:
@@ -39,7 +39,5 @@ State as of 2026-10-17.
 
 ## Open with the person
 
-- Desk #42 (2026-10-18, S3): move the kit pin from v0.1.67 to the newest release the gate passed or the seat read clean (v0.1.74 on 2026-10-19)? The gate stopped hard on
-  the new-machine setup line (`… | sh -s <seat>`, printed for the person, run by no one here) in
-  v0.1.67 and v0.1.70, and v0.1.68 needed a read (clean, SECURITY_AUDIT.md's kit table). Default
-  while unanswered: stay on v0.1.67, adopt nothing.
+- Nothing. Desk #42 was answered 2026-10-19 (option 1): the pin moved to v0.1.79, the setup line
+  (`… | sh -s <seat>`, printed for the person) accepted as safe here.
