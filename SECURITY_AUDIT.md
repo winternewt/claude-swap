@@ -492,3 +492,4 @@ on a new machine, which nothing here runs.
 | 2026-10-19 | v0.1.78 → v0.1.79 | 0 clean | nothing on the watched paths | Clean. Covered by desk #42's option 1. |
 | 2026-10-19 | v0.1.67 → v0.1.79 (the move) | the rows above, v0.1.68 to v0.1.79 | the person's answer on desk #42 ("1*", 2026-10-19 11:26 UTC): option 1, the newest release the gate passed or the seat read clean | Moved. Installed copy == tag (`kitgate.py v0.1.79 v0.1.79 --copy`, exit 0). |
 | 2026-10-19 | v0.1.79 → v0.1.80 (moved) | 0 clean | nothing on the watched paths | Moved without asking, per the standing adoption. Installed copy == tag. |
+| 2026-10-19 | v0.1.80 → v0.1.81 (moved) | 0 clean | nothing on the watched paths | Moved without asking, per the standing adoption. Installed copy == tag. |
