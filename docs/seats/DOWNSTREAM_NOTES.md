@@ -11,7 +11,7 @@ State as of 2026-10-17.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.82; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.84; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
   2026-10-18: "build the gate and threat model, this repo is sensitive"). An announcement in
   `announcements` from the admin seat or a person on the team, of a tag that exists on the kit:
