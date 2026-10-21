@@ -42,6 +42,10 @@ State as of 2026-10-21.
 
 ## Open with the person
 
-- Desk #55 (filed 2026-10-21): move the kit pin v0.1.84 → v0.1.85, which the gate sent to reading
-  (auto-mode rule text; read safe, SECURITY_AUDIT.md). Default: stay on v0.1.84. On "1":
-  `scripts/kittrack.py move v0.1.85 --approved 'desk #55'`. Verify the answer on the issue itself.
+- Desk #55 (filed 2026-10-21, updated the same day for v0.1.86): move the kit pin from v0.1.84.
+  Answers: "1" → v0.1.86, "1.85" → v0.1.85, "2" or silence → stay. Both read safe (SECURITY_AUDIT.md).
+  Verify the answer on the issue itself. "1.85": `scripts/kittrack.py move v0.1.85 --approved 'desk #55'`.
+  "1": v0.1.84 → v0.1.86 gates hard (the renamed forge-gate pipe), which `--approved` never passes, since
+  a moved tag is hard too: first `scripts/kitgate.py v0.1.84 v0.1.86` and confirm its only HARD line is
+  hooks/forge-gate.sh:16, then the procedure's steps by hand (the three client commands, `kitgate.py
+  v0.1.86 v0.1.86 --copy`, the row, the commit, the restart).
