@@ -9,6 +9,9 @@ repo tracks the kit itself.
     kittrack.py watch          the same every --every seconds, each line once (the seat's watcher,
                                [seat.downstream.watch.kit] in .blueprints.toml)
     kittrack.py move [TAG]     the gated move to TAG (default: the newest release), end to end
+    kittrack.py move TAG --approved WHERE
+                               the same past a gate that said read, once the person approved that
+                               reading (WHERE names their answer, e.g. "desk #55"); never past 3 or 4
 
 `move` refuses a working tree whose pin differs from HEAD's, or whose files it writes carry changes.
 Then: kitgate.py OLD NEW, stopping on any exit but 0; under the client's lock for plugin moves on
@@ -201,13 +204,15 @@ def back(root: Path, a, old: str) -> None:
                       f"the gate passed. Stop the seat and put it to the person") from e
 
 
-def write_records(root: Path, old: str, new: str) -> None:
+def write_records(root: Path, old: str, new: str, approved: str | None = None) -> None:
     audit = root / AUDIT
     rows = audit.read_text().split("\n")
     head = next(i for i, r in enumerate(rows) if r.startswith("# The seats kit's pin moves"))
     last = max(i for i, r in enumerate(rows) if i > head and re.match(r"\| \d{4}-\d{2}-\d{2} \| v\d", r))
     today = datetime.date.today().isoformat()
-    rows.insert(last + 1, f"| {today} | {old} → {new} (moved) | 0 clean | nothing on the watched paths | "
+    gate_said, why = (("1 read", f"the reading in the row above, approved by the person ({approved})") if approved
+                      else ("0 clean", "nothing on the watched paths"))
+    rows.insert(last + 1, f"| {today} | {old} → {new} (moved) | {gate_said} | {why} | "
                           f"Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |")
     audit.write_text("\n".join(rows))
     notes = root / NOTES
@@ -217,7 +222,7 @@ def write_records(root: Path, old: str, new: str) -> None:
     notes.write_text(NOTES_LINE.sub(f"The seat runs on kit {new};", text, count=1))
 
 
-def commit(root: Path, new: str, trailers: list[str]) -> None:
+def commit(root: Path, new: str, trailers: list[str], approved: str | None = None) -> None:
     paths = [SETTINGS, AUDIT, NOTES]
     if run(["git", "add", "--", *paths], root).returncode:
         raise Stop(3, "git add failed")
@@ -225,7 +230,8 @@ def commit(root: Path, new: str, trailers: list[str]) -> None:
                             capture_output=True, text=True).stdout.split()
     if sorted(staged) != sorted(paths):
         raise Stop(3, f"the index holds {staged}, not only {paths}: nothing committed")
-    msg = f"Move the seats kit pin to {new}: gated clean" + ("\n\n" + "\n".join(trailers) if trailers else "")
+    how = f"read, approved by the person ({approved})" if approved else "gated clean"
+    msg = f"Move the seats kit pin to {new}: {how}" + ("\n\n" + "\n".join(trailers) if trailers else "")
     if run(["git", "commit", "-q", "-m", msg], root).returncode:
         raise Stop(3, "git commit failed")
 
@@ -254,7 +260,9 @@ def move(root: Path, a) -> int:
         print(f"the pin is {old}; {new} is not newer: nothing to move")
         return 0
     rc = gate(root, a, old, new)
-    if rc:
+    if rc == 1 and a.approved:
+        print(f"the gate said read; the person approved that reading ({a.approved}): moving")
+    elif rc:
         print(f"the gate exited {rc}: nothing moved. Read, record and put it to the person "
               f"(docs/seats/DOWNSTREAM_NOTES.md, step 1)")
         return rc
@@ -274,8 +282,8 @@ def move(root: Path, a) -> int:
             if rc:
                 back(root, a, old)
                 raise Stop(4 if rc == 4 else 3, f"the installed copy of {new} did not pass (exit {rc}): moved back to {old}")
-        write_records(root, old, new)
-        commit(root, new, a.trailer)
+        write_records(root, old, new, a.approved)
+        commit(root, new, a.trailer, a.approved)
     finally:
         (root / MOVING).unlink(missing_ok=True)
     if not a.no_restart:
@@ -294,6 +302,7 @@ def main() -> int:
     ap.add_argument("--seat", default="downstream", help="move: the seat whose watchdog restarts")
     ap.add_argument("--trailer", action="append", default=[], help="move: a line to end the commit message")
     ap.add_argument("--no-restart", action="store_true", help="move: leave the seat's watchdog as it is")
+    ap.add_argument("--approved", metavar="WHERE", help="move: the person approved the gate's reading, there")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)  # tests only
     ap.add_argument("--source", default=KIT_URL, help=argparse.SUPPRESS)
     ap.add_argument("--mirror", type=Path, help=argparse.SUPPRESS)
@@ -305,6 +314,8 @@ def main() -> int:
     a = ap.parse_args()
     if a.tag and a.cmd != "move":
         ap.error("a tag goes with move only")
+    if a.approved and not a.tag:
+        ap.error("--approved names the tag the person approved")
     try:
         if a.cmd == "watch":
             return watch(a.root, a.source, a.claude_dir, a.every)

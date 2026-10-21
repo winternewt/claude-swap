@@ -166,3 +166,20 @@ def test_a_move_refuses_changed_files(kit, repo):
     r = track(kit, repo, "move", "--no-restart")
     assert r.returncode == 3 and "carry changes" in r.stdout, r.stdout
     assert pinned(repo) == "v0.1.0"
+
+
+def test_an_approved_reading_moves_and_says_so(kit, repo):
+    release(kit, "v0.1.1", {"classes/base/watchdog.py": BASE["classes/base/watchdog.py"] + "import base64\n"})
+    r = track(kit, repo, "move", "v0.1.1", "--no-restart")
+    assert r.returncode == 1 and pinned(repo) == "v0.1.0", r.stdout
+    r = track(kit, repo, "move", "v0.1.1", "--no-restart", "--approved", "desk #9")
+    assert r.returncode == 0 and pinned(repo) == "v0.1.1", r.stdout
+    assert "| 1 read | the reading in the row above, approved by the person (desk #9) |" in \
+        (repo / "SECURITY_AUDIT.md").read_text()
+
+
+def test_approval_never_passes_a_hard_stop(kit, repo):
+    release(kit, "v0.1.1", {"classes/base/watchdog.py": BASE["classes/base/watchdog.py"]
+                            + 'X = "https://collect.example.net/in"\n'})
+    r = track(kit, repo, "move", "v0.1.1", "--no-restart", "--approved", "desk #9")
+    assert r.returncode == 4 and pinned(repo) == "v0.1.0", r.stdout

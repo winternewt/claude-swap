@@ -22,7 +22,8 @@ State as of 2026-10-21.
      and the version above, commits the three files and restarts the seat's watchdog on the new copy.
      A copy that fails the check is moved back (exit 4).
   2. Exit 1 (read): read every listed hunk in full, add a row to SECURITY_AUDIT.md's kit table, and put
-     the move to the person (chat, or the desk when away, default "stay on vOLD"). Exit 3 or 4: the
+     the move to the person (chat, or the desk when away, default "stay on vOLD"). On their yes,
+     `move vNEW --approved 'WHERE'` (where they said it); it passes a read, never a 3 or a 4. Exit 3 or 4: the
      same, recommending against unless the reading explains it.
   3. Exit 0: `git push origin main`, `watchdog.py react ID` on the announcement if there is one, and
      the move in the chat in one line.
@@ -43,5 +44,4 @@ State as of 2026-10-21.
 
 - Desk #55 (filed 2026-10-21): move the kit pin v0.1.84 → v0.1.85, which the gate sent to reading
   (auto-mode rule text; read safe, SECURITY_AUDIT.md). Default: stay on v0.1.84. On "1":
-  `scripts/kittrack.py move v0.1.85` (it gates again, and a read exit there is expected: move by hand
-  per the procedure above, or pass the reading). Verify the answer on the issue itself.
+  `scripts/kittrack.py move v0.1.85 --approved 'desk #55'`. Verify the answer on the issue itself.
