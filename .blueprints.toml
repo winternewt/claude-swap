@@ -5,3 +5,7 @@ id = "claude-swap"
 
 [seat.downstream.zulip]
 pool = "~/.config/agent-seat-blueprints/zulip/pool"
+
+# The kit's releases, and a pin moved from outside (docs/TRUST.md, the kit's threat model).
+[seat.downstream.watch.kit]
+cmd = "python3 scripts/kittrack.py watch"

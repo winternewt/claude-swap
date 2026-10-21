@@ -13,24 +13,26 @@ State as of 2026-10-17.
 
 - The seat runs on kit v0.1.84; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
-  2026-10-18: "build the gate and threat model, this repo is sensitive"). An announcement in
-  `announcements` from the admin seat or a person on the team, of a tag that exists on the kit:
-  1. `scripts/kitgate.py vOLD vNEW`. Exit 0: go on. Exit 1: read every listed hunk in full, add a
-     row to SECURITY_AUDIT.md's kit table, and put the move to the person (chat, or the desk when
-     away, default "stay on vOLD"). Exit 3 or 4: the same, recommending against unless the reading
-     explains it.
-  2. The three `claude plugin` commands (marketplace add `#vNEW`, install, update, all
-     `--scope project`).
-  3. `scripts/kitgate.py vNEW vNEW --copy ~/.claude/plugins/cache/agent-seat-blueprints/seats/NEW`.
-     Not 0: move the pin back the same way, and put it to the person.
-  4. Add the row to SECURITY_AUDIT.md's kit table, update the version above, commit those with
-     `.claude/settings.json`, push `main`.
-  5. `watchdog.py stop` + `punch-in downstream` with `CLAUDE_PLUGIN_ROOT` on the new copy, then
-     `watchdog.py react ID` on the announcement, and say the move in the chat in one line.
+  2026-10-18: "build the gate and threat model, this repo is sensitive"; 2026-10-21: the kit can no
+  longer move this pin, so the seat tracks it itself). The trigger is the seat's watcher
+  (`[seat.downstream.watch.kit]`, `scripts/kittrack.py watch`, every 15 minutes) or an announcement
+  in `announcements`, whichever comes first:
+  1. `scripts/kittrack.py move vNEW --trailer 'Co-Authored-By: …'`. It gates `vOLD vNEW`, moves the
+     pin and the client's copy, holds the copy against the tag, records the row in SECURITY_AUDIT.md
+     and the version above, commits the three files and restarts the seat's watchdog on the new copy.
+     A copy that fails the check is moved back (exit 4).
+  2. Exit 1 (read): read every listed hunk in full, add a row to SECURITY_AUDIT.md's kit table, and put
+     the move to the person (chat, or the desk when away, default "stay on vOLD"). Exit 3 or 4: the
+     same, recommending against unless the reading explains it.
+  3. Exit 0: `git push origin main`, `watchdog.py react ID` on the announcement if there is one, and
+     the move in the chat in one line.
 
-  Several releases announced at once go as one move to the newest, gated as one diff.
-- The kit has no watch on its release tags (filed #36, now the kit lead's L15); the announcement is
-  the trigger.
+  Several releases at once go as one move to the newest, gated as one diff (`move` with no tag).
+- **A `drift:` line from the watcher** means the pin or the client's install record moved without
+  `move`. Gate what is now installed (`kitgate.py vHEAD vNOW`, then `vNOW vNOW --copy`), and commit it
+  with a row saying who moved it, or move it back; say it to the person either way.
+- The kit's lead seat agreed to leave this pin to this seat, even on a mass move (2026-10-20, Zulip
+  633433182).
 
 ## Upstream
 
