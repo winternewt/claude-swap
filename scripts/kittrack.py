@@ -260,7 +260,8 @@ def commit(root: Path, new: str, trailers: list[str], approved: str | None = Non
 def restart(root: Path, a, new: str) -> None:
     copy = copy_of(a, new)
     env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(copy))
-    wd = ["sh", str(copy / "bin" / "py"), str(copy / "classes" / "base" / "watchdog.py")]
+    py = copy / "bin" / "py.sh"  # bin/py before v0.1.86
+    wd = ["sh", str(py if py.is_file() else copy / "bin" / "py"), str(copy / "classes" / "base" / "watchdog.py")]
     run([*wd, "stop", a.seat], root, env)
     if run([*wd, "punch-in", a.seat], root, env).returncode:
         raise Stop(3, f"the seat {a.seat} did not punch in on {new}: run /seats:seat {a.seat}")
@@ -309,7 +310,8 @@ def move(root: Path, a) -> int:
         (root / MOVING).unlink(missing_ok=True)
     if not a.no_restart:
         restart(root, a, new)
-    print(f"moved: {old} -> {new}, gated clean, installed copy == tag, committed. Left for the seat: "
+    how = f"the read approved ({a.approved})" if a.approved else "gated clean"
+    print(f"moved: {old} -> {new}, {how}, installed copy == tag, committed. Left for the seat: "
           f"git push origin main; watchdog.py react ID on the announcement, if there is one; "
           f"/reload-plugins for this session's hooks")
     return 0
