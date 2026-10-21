@@ -1,6 +1,6 @@
 # Downstream seat — notes
 
-State as of 2026-10-17.
+State as of 2026-10-21.
 
 ## Marker
 
@@ -41,5 +41,7 @@ State as of 2026-10-17.
 
 ## Open with the person
 
-- Nothing. Desk #42 was answered 2026-10-19 (option 1): the pin moved to v0.1.79, the setup line
-  (`… | sh -s <seat>`, printed for the person) accepted as safe here.
+- Desk #55 (filed 2026-10-21): move the kit pin v0.1.84 → v0.1.85, which the gate sent to reading
+  (auto-mode rule text; read safe, SECURITY_AUDIT.md). Default: stay on v0.1.84. On "1":
+  `scripts/kittrack.py move v0.1.85` (it gates again, and a read exit there is expected: move by hand
+  per the procedure above, or pass the reading). Verify the answer on the issue itself.
