@@ -21,10 +21,13 @@ State as of 2026-10-21.
      pin and the client's copy, holds the copy against the tag, records the row in SECURITY_AUDIT.md
      and the version above, commits the three files and restarts the seat's watchdog on the new copy.
      A copy that fails the check is moved back (exit 4).
-  2. Exit 1 (read): read every listed hunk in full, add a row to SECURITY_AUDIT.md's kit table, and put
-     the move to the person (chat, or the desk when away, default "stay on vOLD"). On their yes,
-     `move vNEW --approved 'WHERE'` (where they said it); it passes a read, never a 3 or a 4. Exit 3 or 4: the
-     same, recommending against unless the reading explains it.
+  2. Exit 1 (read): read every listed hunk in full and add a row to SECURITY_AUDIT.md's kit table.
+     While the kit is private (the person's grant, 2026-10-21, docs/TRUST.md), a safe verdict moves at
+     once: `move vNEW --approved 'standing grant 2026-10-21'`; an unsafe one goes to the person. Once the
+     watcher says the kit reads without credentials, the grant is over: put each read to the person
+     (chat, or the desk when away, default "stay on vOLD"), and on their yes `move vNEW --approved
+     'WHERE'`. It passes a read, never a 3 or a 4. Exit 3 or 4: put to the person, recommending against
+     unless the reading explains it.
   3. Exit 0: `git push origin main`, `watchdog.py react ID` on the announcement if there is one, and
      the move in the chat in one line.
 

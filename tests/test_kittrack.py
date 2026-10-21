@@ -78,7 +78,7 @@ def repo(tmp_path):
     return r
 
 
-def track(kit: Path, repo: Path, *args: str, tamper: bool = False) -> subprocess.CompletedProcess:
+def track(kit: Path, repo: Path, *args: str, tamper: bool = False, public: str = "") -> subprocess.CompletedProcess:
     d = kit.parent / "claude"
     d.mkdir(exist_ok=True)
     fake = kit.parent / "fake_claude.py"
@@ -90,7 +90,7 @@ def track(kit: Path, repo: Path, *args: str, tamper: bool = False) -> subprocess
            **({"FAKE_TAMPER": "1"} if tamper else {})}
     return subprocess.run([sys.executable, str(TRACK), *args, "--root", str(repo), "--source", str(kit),
                            "--mirror", str(kit.parent / "mirror.git"), "--claude", str(wrapper),
-                           "--claude-dir", str(d), "--repo", "o/kit"],
+                           "--claude-dir", str(d), "--repo", "o/kit", "--public-url", public],
                           capture_output=True, text=True, env=env)
 
 
@@ -109,6 +109,12 @@ def test_the_newest_release_is_named_by_number(kit, repo):
     release(kit, "v0.1.10", {"docs/NOTES.md": "10\n"})
     r = track(kit, repo, "check")
     assert r.returncode == 1 and "kit v0.1.10 is out, the pin is v0.1.0" in r.stdout, r.stdout
+
+
+def test_a_kit_readable_without_credentials_ends_the_grant(kit, repo):
+    r = track(kit, repo, "check", public=str(kit))
+    assert r.returncode == 1 and "it is public, and the person's grant to move past a read has ended" in r.stdout
+    assert track(kit, repo, "check", public=str(kit.parent / "nowhere")).stdout == ""
 
 
 def test_a_pin_moved_outside_is_drift(kit, repo):

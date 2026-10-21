@@ -48,9 +48,14 @@ one itself.
 - **The control.** Before each pin move, `scripts/kitgate.py OLD NEW` (record and method in
   SECURITY_AUDIT.md, "The seats kit's pin moves"):
   - **clean** (exit 0): the pin moves without asking, and the move is reported;
-  - **read** (exit 1): the seat reads every listed hunk in full, records its verdict, and puts the
-    move to the person; the pin stays meanwhile;
+  - **read** (exit 1): the seat reads every listed hunk in full and records its verdict. While the
+    kit is private, the person lets the seat then move on that verdict without asking ("auto move
+    until kit goes public", 2026-10-21: `move vNEW --approved 'standing grant 2026-10-21'`), and a
+    verdict of unsafe still stops the move and goes to the person. The grant ends when the kit's
+    repository reads without credentials, which the watcher checks on every poll and says; from
+    then on each read is put to the person and the pin stays meanwhile;
   - **hard** (exit 4) or **unknown** (exit 3): the pin stays, and the person decides with the hunks.
+    The grant above does not reach these: a moved tag or an installed copy unlike its tag is hard.
 
   After the move, `kitgate.py NEW NEW --copy <installed copy>` holds what the client installed
   against the tag, before the watchdog restarts on it or a session reloads it. A mismatch moves the

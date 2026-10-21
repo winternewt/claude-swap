@@ -13,6 +13,11 @@ repo tracks the kit itself.
                                the same past a gate that said read, once the person approved that
                                reading (WHERE names their answer, e.g. "desk #55"); never past 3 or 4
 
+While the kit's repository is private, with the person its only builder, the person lets this seat move
+past a gate that said read once the seat has read and recorded it (2026-10-21, "auto move until kit goes
+public"; docs/TRUST.md). check and watch therefore also say when the repository reads without
+credentials: from then on each read goes to the person again.
+
 `move` refuses a working tree whose pin differs from HEAD's, or whose files it writes carry changes.
 Then: kitgate.py OLD NEW, stopping on any exit but 0; under the client's lock for plugin moves on
 this machine (shared with the kit's bin/move-to-tag), the client's three commands; the pin and the
@@ -134,20 +139,36 @@ def drift(root: Path, claude_dir: Path) -> list[str]:
     return out
 
 
-def status(root: Path, source: str, claude_dir: Path) -> list[str]:
+def public(url: str) -> bool:
+    """Whether URL reads with no credentials and no user or system git config: the kit gone public."""
+    if not url:
+        return False
+    env = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0",
+               GIT_ASKPASS="/bin/false", SSH_ASKPASS="/bin/false")
+    try:
+        return subprocess.run(["git", "ls-remote", url, "HEAD"], capture_output=True, env=env,
+                              timeout=60).returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+
+
+def status(root: Path, source: str, claude_dir: Path, public_url: str = KIT_URL) -> list[str]:
     lines = drift(root, claude_dir)
+    if public(public_url):
+        lines.append(f"the kit's repository {public_url} reads without credentials: it is public, and the "
+                     f"person's grant to move past a read has ended (docs/TRUST.md). Put each read to the person")
     now, top = pin(root), newest(source)
     if key(top) > key(now):
         lines.append(f"kit {top} is out, the pin is {now}: scripts/kittrack.py move {top}")
     return lines
 
 
-def watch(root: Path, source: str, claude_dir: Path, every: float) -> int:
+def watch(root: Path, source: str, claude_dir: Path, every: float, public_url: str = KIT_URL) -> int:
     said: set[str] = set()
     fails = 0
     while True:
         try:
-            lines = status(root, source, claude_dir)
+            lines = status(root, source, claude_dir, public_url)
             fails = 0
             for line in lines:
                 if line not in said:
@@ -306,6 +327,7 @@ def main() -> int:
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)  # tests only
     ap.add_argument("--source", default=KIT_URL, help=argparse.SUPPRESS)
     ap.add_argument("--mirror", type=Path, help=argparse.SUPPRESS)
+    ap.add_argument("--public-url", default=KIT_URL, help=argparse.SUPPRESS)
     ap.add_argument("--repo", default=OWNER_REPO, help=argparse.SUPPRESS)
     ap.add_argument("--claude", default=os.environ.get("CLAUDE_CLI", "claude"), help=argparse.SUPPRESS)
     ap.add_argument("--claude-dir", type=Path,
@@ -318,9 +340,9 @@ def main() -> int:
         ap.error("--approved names the tag the person approved")
     try:
         if a.cmd == "watch":
-            return watch(a.root, a.source, a.claude_dir, a.every)
+            return watch(a.root, a.source, a.claude_dir, a.every, a.public_url)
         if a.cmd == "check":
-            lines = status(a.root, a.source, a.claude_dir)
+            lines = status(a.root, a.source, a.claude_dir, a.public_url)
             for line in lines:
                 print(line)
             return 1 if lines else 0
