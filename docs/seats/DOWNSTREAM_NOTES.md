@@ -11,7 +11,7 @@ State as of 2026-10-21.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.84; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.86; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
   2026-10-18: "build the gate and threat model, this repo is sensitive"; 2026-10-21: the kit can no
   longer move this pin, so the seat tracks it itself). The trigger is the seat's watcher
@@ -42,10 +42,4 @@ State as of 2026-10-21.
 
 ## Open with the person
 
-- Desk #55 (filed 2026-10-21, updated the same day for v0.1.86): move the kit pin from v0.1.84.
-  Answers: "1" → v0.1.86, "1.85" → v0.1.85, "2" or silence → stay. Both read safe (SECURITY_AUDIT.md).
-  Verify the answer on the issue itself. "1.85": `scripts/kittrack.py move v0.1.85 --approved 'desk #55'`.
-  "1": v0.1.84 → v0.1.86 gates hard (the renamed forge-gate pipe), which `--approved` never passes, since
-  a moved tag is hard too: first `scripts/kitgate.py v0.1.84 v0.1.86` and confirm its only HARD line is
-  hooks/forge-gate.sh:16, then the procedure's steps by hand (the three client commands, `kitgate.py
-  v0.1.86 v0.1.86 --copy`, the row, the commit, the restart).
+- Nothing. Desk #55 was answered "1" in chat on 2026-10-21: the pin moved to v0.1.86.
