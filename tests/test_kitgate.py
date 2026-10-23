@@ -82,6 +82,13 @@ def test_a_watched_change_is_put_to_the_person(kit, files):
     assert gate(kit, "v0.1.0", "v0.1.1").returncode == 1
 
 
+def test_an_elided_example_url_is_no_host(kit):
+    release(kit, "v0.1.1", {"classes/base/watchdog.py": BASE["classes/base/watchdog.py"]
+                            + '"""act on #30: the default is the decision https://..."""\n'})
+    r = gate(kit, "v0.1.0", "v0.1.1")
+    assert r.returncode != 4 and "new network host" not in r.stdout, r.stdout
+
+
 def test_a_line_that_only_moved_is_not_listed_again(kit):
     line = "tok = creds['accessToken']\n"
     release(kit, "v0.1.1", {"classes/base/watchdog.py": BASE["classes/base/watchdog.py"] + line})

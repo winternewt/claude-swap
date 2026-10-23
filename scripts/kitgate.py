@@ -80,7 +80,7 @@ CATEGORIES = [
     (READ, "shell string", re.compile(
         r"os\.system|os\.popen|shell=True|\b(ba)?sh\b\"?,? *\"?-c\b|nohup|setsid")),
 ]
-HOST = re.compile(r"https?://([A-Za-z0-9.-]+)")
+HOST = re.compile(r"https?://([A-Za-z0-9][A-Za-z0-9.-]*)")  # a name, never an elided "https://..."
 WATCHED_FILES = ("hooks/hooks.json", ".claude-plugin/plugin.json", ".mcp.json")
 
 
