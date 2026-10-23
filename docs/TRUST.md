@@ -65,6 +65,13 @@ one itself.
   the tracked pin moved in the tree without a commit, or the client's install record for this clone
   at another version. Either means a move outside the gate; the seat gates what is installed and
   says it to the person.
+- **Outside models.** From v0.1.88 the kit's consensus runs (`/seats:three-leaf`, `/seats:four-leaf`,
+  `/seats:consensus`, the dream, the trunk review) send a copy of a repository to Cursor's, Codex's or
+  OpenRouter's servers. One the person types does so unless the repository opts out, and that check
+  is prose that the agent is told to follow. This repo opts out: `outside = "never"` under `[repo]` in
+  `.blueprints.toml` (2026-10-23, set by this seat while the person was away; theirs to lift). A
+  session here also spawns no consensus, trunk-review, four-leaf, tri-review or cursor-*/codex agent
+  on this repository; those that the person keeps outside the kit have no gate of their own.
 - **The risk accepted.** What the gate's patterns do not name: a host built at run time, a leak
   through a client and host the kit already uses by a line no pattern matches, an instruction
   changed in a file outside the set a session here loads. Also the minutes between the client's

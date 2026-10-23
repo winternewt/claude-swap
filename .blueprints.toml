@@ -1,5 +1,8 @@
 [repo]
 id = "claude-swap"
+# The kit's consensus runs (three-leaf, four-leaf, consensus) send no copy of this repo to an outside
+# model, even when the person types one (docs/TRUST.md, the seats kit row; kit v0.1.88 repo-prep).
+outside = "never"
 
 [seat.downstream]
 
