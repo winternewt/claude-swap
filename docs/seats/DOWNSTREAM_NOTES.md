@@ -45,4 +45,9 @@ State as of 2026-10-21.
 
 ## Open with the person
 
-- Nothing. Desk #55 was answered "1" in chat on 2026-10-21: the pin moved to v0.1.86.
+- Desk #110 (filed 2026-10-24): move the kit pin from v0.1.88 to v0.1.89. Answers: "1" → move, "2" or
+  silence → stay. It gated hard (two `persistence` lines, prose in the person-only host-move and
+  repo-rename skills), read safe (SECURITY_AUDIT.md). Verify the answer on the issue itself. On "1":
+  `scripts/kitgate.py v0.1.88 v0.1.89`, confirm its only HARD lines are those two, then the move by hand
+  as for v0.1.86 (the tracker's own client, `--copy` gate and move-back, then the row, the commit, the
+  restart), since `--approved` never passes a hard stop.
