@@ -57,4 +57,5 @@ State as of 2026-10-21.
   session's herdr pane itself when the pin is ahead. From v0.1.93 the forge gate checks unseated sessions only
   because `.blueprints.toml` sets `forge_gate_unseated = true`: keep it. From v0.1.96 the watchdog runs that
   reloader itself every minute. A later release: gate it against
-  v0.1.88 and update #110 the same way.
+  v0.1.88 and update #110 the same way, the comment opening with a bare `**Update:**` line (the desk's
+  protocol line from kit v0.1.98; `**Update (date):**` is not read as one).
