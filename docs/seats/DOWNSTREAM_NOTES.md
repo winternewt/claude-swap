@@ -46,10 +46,10 @@ State as of 2026-10-21.
 ## Open with the person
 
 - Desk #110 (filed 2026-10-24 for v0.1.89; comments on 2026-10-25 moved it to v0.1.90, v0.1.91, v0.1.92, v0.1.93,
-  v0.1.94, then (2026-10-26) v0.1.95, then (2026-10-27) v0.1.96 and v0.1.97, each superseding the last): move the kit pin from v0.1.88 to v0.1.97. Answers: "1" → move, "2" or silence →
+  v0.1.94, then (2026-10-26) v0.1.95, then (2026-10-27) v0.1.96, v0.1.97 and v0.1.98, each superseding the last): move the kit pin from v0.1.88 to v0.1.98. Answers: "1" → move, "2" or silence →
   stay. It gated hard (the repo-rename skill's `persistence` line, and two `pipe to shell` lines that print
   the person's bootstrap command, never run), read safe (SECURITY_AUDIT.md). Verify the answer on the issue
-  itself. On "1": `scripts/kitgate.py v0.1.88 v0.1.97`, confirm its only HARD lines are those four (repo-rename:42,
+  itself. On "1": `scripts/kitgate.py v0.1.88 v0.1.98`, confirm its only HARD lines are those four (repo-rename:42,
   host-move:124, onboard.py:913 and :921), then the
   move by hand as for v0.1.86 (the tracker's own client, `--copy` gate and move-back, then the row, the
   commit, the restart), since `--approved` never passes a hard stop. v0.1.91's punch-in refuses a session
