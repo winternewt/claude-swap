@@ -4,12 +4,13 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08, extended 2026-10-10 and 2026-10-16
-**Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2` (current stable
-on PyPI, see [below](#also-audited-02700272-and-fork-0280b1-at-70dde18));
-the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, and its `0.28.0b1` at
-`70dde18` (git installs, which `cswap upgrade` now installs through the
-`audited` tag)
+**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16 and 2026-11-04
+**Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2`; `0.28.0` and
+`0.29.0` (current stable on PyPI, see
+[below](#also-audited-0280-and-0290-and-the-fork-merge-babc945));
+the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, its `0.28.0b1` at
+`70dde18`, and its `0.29.0` at `babc945` (git installs, which `cswap upgrade`
+installs through the `audited` tag)
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
 **Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
@@ -349,19 +350,121 @@ host (`github.com` again, through the same constant). A wheel built from
 `git archive 59d9ffb` holds exactly `src/claude_swap/` at that commit (42
 files, byte-identical, no `.pth`, same `Requires-Dist`).
 
+### Also audited: `0.28.0` and `0.29.0`, and the fork merge `babc945`
+
+Upstream tagged two releases. The fork merged the `v0.29.0` tag at `babc945`.
+The 21 commits on `upstream/main` past `v0.29.0` are not merged and not audited.
+
+**Upstream delta:** `8fdc89a` (the last upstream commit the `59d9ffb` audit
+covered) `→ v0.29.0`, 26 files under `src/`, +2958 / −780. `pyproject.toml`
+changes only the version. No new host, no new dependency, no new persistence.
+
+Read in full:
+
+- **`update_check.py`, network.** A uv install now asks `uv pip list
+  --outdated --python <this interpreter>` (10 s timeout, run from
+  `sys.prefix`, `UV_EXCLUDE_NEWER` stripped) for the newest release, honouring
+  the uv receipt's `exclude-newer` cooldown. Non-uv installs still do the
+  anonymous GET to `pypi.org`. That means uv, not cswap, now contacts the index
+  uv is configured with, the same index `uv tool upgrade` would use. A failed
+  lookup is cached for an hour. A new setting, `updates.check`, can switch the
+  daily lookup off. After an upgrade, `run_self_upgrade` starts
+  `sys.executable -c "import importlib.metadata …"` to report the version that
+  landed. Upstream also prints a notice for a release the cooldown hides. It
+  advises `uv tool upgrade claude-swap --exclude-newer "0 days"`. **The fork
+  drops that notice** (below).
+- **`oauth.py`:** a constant for the `"5h"` label only. No request changed.
+- **`spawn.py` (new):** on macOS only, `run()` calls `subprocess.run` with an
+  absolute path and `close_fds=False`, so CPython takes `posix_spawn` instead
+  of `fork`. This avoids a stray libmalloc line (#517). It switches only when
+  no descriptor above 2 is inheritable. Otherwise it is plain
+  `subprocess.run`. It is used for `ps`, `/usr/bin/security` and one
+  `session.py` call, with the same commands as before.
+- **`app_bundle.py` (new), macOS only, on `cswap menubar`:** cswap builds
+  `/Applications/claude-swap Menubar.app` (or one in the data directory when
+  `/Applications` is not writable). The bundle holds a byte copy of the
+  running interpreter, a `pyvenv.cfg`, symlinks to the install's
+  `lib/python3.X` and the base `libpython`, and an `Info.plist` with
+  `com.claude-swap.menubar`. cswap test-runs that interpreter with
+  `import claude_swap`, then `os.execv`s into it with the same arguments.
+  `CLAUDE_SWAP_NO_BUNDLE` opts out. **This is not persistence.** Nothing
+  starts it at login unless the existing opt-in LaunchAgent is installed. It
+  does put an app in `/Applications` on first `cswap menubar`.
+- **`fsutil.py`, credential writers:** `atomic_write_bytes`/`atomic_write_text`
+  replace each module's own temp + rename: the temp is 0600 from `mkstemp`,
+  `fchmod` runs on the descriptor, then `fsync`, then rename. Credentials,
+  backups, `.enc` files, `sequence.json`, settings, mappings and exports now go
+  through it. **One behaviour change:** a destination that is a symlink is
+  written *through* to its target (`realpath`, strict), not replaced. Only
+  `transfer.py` (an export path the user typed) passes
+  `follow_symlinks=False`, so a planted link cannot redirect an export of
+  refresh tokens.
+- **`credentials.py`:** a 60 s per-slot cache of backup Keychain reads, for
+  display and eligibility only. Every read that is POSTed, written or
+  activated stays fresh. Inside the Keychain failure cooldown a backup read
+  raises without spawning `security`. Tokens stay local.
+- **`switcher.py`:** per-account `threshold` and `priority` in `sequence.json`
+  (new commands `cswap threshold`, `cswap priority`). The staging files are
+  claimed before `O_EXCL` create. A refresh writes the prepared
+  live credential to the active store. Nothing leaves the machine.
+- **`process_detection.py`, `session.py`, `macos_keychain.py`,
+  `launch_agent.py`, `claude_locks.py`, `migrations.py`, `transfer.py`,
+  `menubar.py`:** `spawn.run` in place of `subprocess.run`, the shared atomic
+  writer, a serialized stale-lock takeover (`<lock>.takeover` directory), a
+  session scan that reports an unlistable directory, and a docstring change.
+
+Swept rather than read line by line: `autoswitch.py` (+1143, a refactor of
+the switching engine: weekly-first and priority strategies, per-account
+lines; its new imports are `lines` and `models` only), `lines.py` (new),
+`models.py`, `poll_policy.py`, `settings.py`, `mappings.py`, `json_output.py`,
+`cli.py` (the `threshold` and `priority` commands, `run.shareHistory`), and
+the TUI files. A grep of their added lines for network, process, environment,
+credential and file-write constructs finds only the atomic writer and settings
+reads. These files touch no network, process or secret.
+
+**Published `0.28.0`, `0.29.0` == their tags.** `redflag.sh 0.28.0 --baseline
+0.27.2 --repo . --git-ref v0.28.0` and `redflag.sh 0.29.0 --baseline 0.28.0
+--repo . --git-ref v0.29.0`: the PyPI SHA256s verify. All package files match
+the tag (43 and 44). The wheel and sdist ship identical code, the build is
+stock hatchling with no hooks, `Requires-Dist` is unchanged, and the hosts are
+the known ones. The red flags are the delta lines above (`app_bundle.py`'s
+`execv`, `spawn.py`, `update_check.py`'s `uv` and version probes), read in
+full.
+
+| Release | Artifact | SHA256 |
+|---|---|---|
+| `0.28.0` | wheel | `91a67a271b148247242e6ffadb3a2597febf87cde4d7e14ef8df4818744eb902` |
+| `0.28.0` | sdist | `d3e796ee44daddeeb342668594d65951788469c94e887148c78eef294d6a2593` |
+| `0.29.0` | wheel | `fb30342ea2aa365d706706d02a6c2b5dfe82765c0abaf9a2c4839a9a38450e9e` |
+| `0.29.0` | sdist | `175932299b7f627b840ddce63dafc05aecc2d35d168792b4e9f2b94e192a3978` |
+
+**Fork merge `babc945`.** Over `v0.29.0` the fork carries the same changes as
+before: `update_check.py`'s `AUDITED_SOURCE` and `UPGRADE_COMMANDS`,
+`menubar.py`'s remedy text, `usage_server.py` (unchanged since `audited`) and
+its two `serving()` hooks in `cli.py` and `tui/__init__.py`. The merge
+conflicted in `update_check.py`. The fork's commands and wording are kept.
+Upstream's cooldown notice is not printed, on Windows or after an upgrade,
+because it would send the user to `uv tool upgrade`. The function stays,
+unused. The tests that pinned the notice now pin its absence. `uv run pytest
+-q`: 2954 passed, 7 skipped.
+
+**Build check:** a wheel built from `git archive babc945` holds exactly
+`src/claude_swap/` at that commit (45 files, byte-identical), no `.pth`, the
+two expected console scripts and the same `Requires-Dist`.
+
 ### To run exactly the audited version
 
 ```bash
-uv tool install 'claude-swap==0.27.2'      # current stable — verified clean
+uv tool install 'claude-swap==0.29.0'      # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@59d9ffbecaaeab3b6f654b6a9b0411fd6b2d0d9f'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@babc945b415545cf1c127ab2950ab032fcf84318'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `59d9ffb` that touches `src/` or `pyproject.toml` is
+Any commit after `babc945` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `59d9ffb`'s: the commits after it touch only this file,
+sentence. Its code is `babc945`'s: the commits after it touch only this file,
 `docs/seats/` and `.claude/settings.json`.
 
 **Marker history** (the old commit is recorded here before each move, as the
@@ -370,7 +473,8 @@ seat's grant requires):
 | Date | `audited` moved from | to | Code audited |
 |---|---|---|---|
 | 2026-10-16 | (new) | `d138f8d` | `70dde18` |
-| 2026-10-16 | `d138f8d` | the commit adding this row | `59d9ffb` |
+| 2026-10-16 | `d138f8d` | `a2b2f43` | `59d9ffb` |
+| 2026-11-04 | `a2b2f43` | the commit adding this row | `babc945` |
 
 ---
 

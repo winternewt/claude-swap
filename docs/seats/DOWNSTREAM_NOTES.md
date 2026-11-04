@@ -1,11 +1,12 @@
 # Downstream seat — notes
 
-State as of 2026-10-21.
+State as of 2026-11-04.
 
 ## Marker
 
-- `audited` (a tag) → the commit that moved it on 2026-10-16. Its code is `59d9ffb` (gated); before
-  that it pointed at `d138f8d`. The history is in SECURITY_AUDIT.md's marker table.
+- `audited` (a tag) → the commit that moved it on 2026-11-04. Its code is `babc945` (the merge of upstream
+  `v0.29.0`, gated); before that it pointed at `a2b2f43` (code `59d9ffb`). The history is in SECURITY_AUDIT.md's
+  marker table.
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
 
@@ -40,11 +41,10 @@ State as of 2026-10-21.
 
 ## Upstream
 
-- Last release adopted: `v0.27.2`, and `upstream/main` through `8fdc89a` (the `0.28.0b1` bump),
-  merged at `a410e87`.
-- **Waiting (seen 2026-11-04):** `v0.28.0` (2b2d71c, 2026-10-22) and `v0.29.0` (480d194, 2026-10-28), plus 21
-  commits on `upstream/main` past v0.29.0. Delta v0.27.2 → v0.29.0: 27 files under `src/` and `pyproject.toml`,
-  +2964/−783. State: `unattended`, gated as one pass to v0.29.0 once the person is away.
+- Last release adopted: `v0.29.0` (with `v0.28.0`), merged at `babc945` on 2026-11-04. `upstream/main` carries 21
+  more commits past it, not merged; they wait for the next tag. The merge keeps the fork's `UPGRADE_COMMANDS` and
+  drops upstream's release-cooldown notice (it points at `uv tool upgrade`); expect that conflict again in
+  `update_check.py` and `tests/test_update_check.py`.
 
 ## Open with the person
 
