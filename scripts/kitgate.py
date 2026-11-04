@@ -22,7 +22,8 @@ EXIT STATUS
   3  unknown: a check could not run. Never a pass: the pin stays.
   4  hard: a new network host, persistence, obfuscation, a credential path outside the kit's
      own, a runtime dependency, a moved tag, or an installed copy that differs from its tag.
-     The pin stays; the person decides, with the hunks and the seat's reading.
+     The pin stays; the person decides, with the hunks and the seat's reading. A hard line the
+     person accepted, listed word for word in scripts/kitgate-accepted.txt, is read instead.
 
 A clean exit means no known-bad pattern changed, not that the release is safe.
 """
@@ -53,6 +54,10 @@ LOADED_MD = ("classes/base/", "classes/downstream/", "skills/", "commands/", "ag
              "hooks/")
 # Files the client adds to an installed copy.
 COPY_EXTRA = re.compile(r"(^|/)__pycache__/|\.pyc$|^\.in_use(/|$)")
+
+# Hard lines the person accepted after a recorded reading: listed as read, matched by category, file and exact
+# text (tab separated, the line stripped), so a change to the line, or the same text in another file, is hard again.
+ACCEPTED = Path(__file__).resolve().parent / "kitgate-accepted.txt"
 
 HARD, READ = "hard", "read"
 CATEGORIES = [
@@ -176,6 +181,21 @@ def without_version(blob: bytes | None) -> str:
     return re.sub(r'"version"\s*:\s*"[^"]*"', "", text(blob or b"") or "")
 
 
+def accepted(path: Path) -> set[tuple[str, str, str]]:
+    """The (category, file, line) entries in PATH; none when it is absent. A malformed one is unknown, never skipped."""
+    if not path.exists():
+        return set()
+    out = set()
+    for n, raw in enumerate(path.read_text().splitlines(), 1):
+        if not raw.strip() or raw.startswith("#"):
+            continue
+        parts = raw.split("\t", 2)
+        if len(parts) != 3 or parts[0] not in {c for _, c, _ in CATEGORIES} or not parts[1] or not parts[2].strip():
+            raise Unknown(f"{path.name}:{n}: not a category, a file and a line, tab separated")
+        out.add((parts[0], parts[1], parts[2].strip()))
+    return out
+
+
 def check_copy(new: dict[str, bytes], copy: Path) -> list[str]:
     if not copy.is_dir():
         raise Unknown(f"no installed copy at {copy}")
@@ -204,11 +224,13 @@ def main() -> int:
     ap.add_argument("--copy", type=Path, help="the installed copy of NEW to hold against its tag")
     ap.add_argument("--source", default=KIT_URL, help=argparse.SUPPRESS)  # tests only
     ap.add_argument("--mirror", type=Path, default=MIRROR, help=argparse.SUPPRESS)
+    ap.add_argument("--accepted", type=Path, default=ACCEPTED, help=argparse.SUPPRESS)  # tests only
     a = ap.parse_args()
     configure(a.source, a.mirror)
     old_tag, new_tag = (t if t.startswith("v") else f"v{t}" for t in (a.old, a.new))
 
     try:
+        ok = accepted(a.accepted)
         fetch()
         old, new = tree(old_tag), tree(new_tag)
         if subprocess.run(["git", "--git-dir", str(MIRROR), "merge-base", "--is-ancestor",
@@ -237,13 +259,18 @@ def main() -> int:
 
     before, after = matches(old), matches(new)
     where: dict[str, list[str]] = {}
+    files_of: dict[str, set[str]] = {}
     for path, n, line in lines(new):
         where.setdefault(line, []).append(f"{path}:{n}")
+        files_of.setdefault(line, set()).add(path)
     for tier, name, _ in CATEGORIES:
         added = after[name] - before[name]
         for line in sorted(added):
             entry = f"{name}: {', '.join(where.get(line, ['?'])[:3])}\n      {line[:160]}"
-            (hard if tier == HARD else read).append(entry)
+            if tier == HARD and all((name, f, line) in ok for f in files_of.get(line, {"?"})):
+                read.append(f"accepted {entry}")
+            else:
+                (hard if tier == HARD else read).append(entry)
 
     for f in WATCHED_FILES:
         o, n = old.get(f), new.get(f)
