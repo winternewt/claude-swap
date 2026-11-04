@@ -56,6 +56,10 @@ one itself.
     then on each read is put to the person and the pin stays meanwhile;
   - **hard** (exit 4) or **unknown** (exit 3): the pin stays, and the person decides with the hunks.
     The grant above does not reach these: a moved tag or an installed copy unlike its tag is hard.
+    A hard line the person accepted after its reading is listed in `scripts/kitgate-accepted.txt`
+    by category, file and whole text, and the gate lists it as read; a changed line, or the same
+    text in another file, is hard again (the person, 2026-11-04: five lines that stopped every
+    release from v0.1.89 to v0.1.124, each read safe).
 
   After the move, `kitgate.py NEW NEW --copy <installed copy>` holds what the client installed
   against the tag, before the watchdog restarts on it or a session reloads it. A mismatch moves the
