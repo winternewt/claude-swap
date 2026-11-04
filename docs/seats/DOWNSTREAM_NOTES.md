@@ -41,7 +41,10 @@ State as of 2026-10-21.
 ## Upstream
 
 - Last release adopted: `v0.27.2`, and `upstream/main` through `8fdc89a` (the `0.28.0b1` bump),
-  merged at `a410e87`. No release is waiting.
+  merged at `a410e87`.
+- **Waiting (seen 2026-11-04):** `v0.28.0` (2b2d71c, 2026-10-22) and `v0.29.0` (480d194, 2026-10-28), plus 21
+  commits on `upstream/main` past v0.29.0. Delta v0.27.2 → v0.29.0: 27 files under `src/` and `pyproject.toml`,
+  +2964/−783. State: `unattended`, gated as one pass to v0.29.0 once the person is away.
 
 ## Open with the person
 
