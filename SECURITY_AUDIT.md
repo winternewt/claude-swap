@@ -413,14 +413,32 @@ Read in full:
   writer, a serialized stale-lock takeover (`<lock>.takeover` directory), a
   session scan that reports an unlistable directory, and a docstring change.
 
-Swept rather than read line by line: `autoswitch.py` (+1143, a refactor of
-the switching engine: weekly-first and priority strategies, per-account
-lines; its new imports are `lines` and `models` only), `lines.py` (new),
-`models.py`, `poll_policy.py`, `settings.py`, `mappings.py`, `json_output.py`,
-`cli.py` (the `threshold` and `priority` commands, `run.shareHistory`), and
-the TUI files. A grep of their added lines for network, process, environment,
-credential and file-write constructs finds only the atomic writer and settings
-reads. These files touch no network, process or secret.
+Also read in full, in a second pass the same day (first only swept by grep):
+
+- **`autoswitch.py`** (+758 / −385): the switching engine's decisions. It
+  adds per-window lines (`weeklyThreshold`), per-account thresholds, a
+  `priority-consume-first` strategy, and a room-based ranking when every
+  account is over its lines. It replaces the earlier soonest-reset ranking.
+  Every new call out of the module is `switcher.account_policies()` (a read
+  of `sequence.json`); the switch itself still goes through the existing
+  switcher calls. Its one new write is four health-counter keys
+  (`unhealthyTicks`, `idleHoldSince`, `healthAccount`, `healthTickAt`) in its
+  own state file, through the existing `_mutate_state`, skipped on a dry run.
+  No network, no process, no credential read.
+- **`lines.py`** (new): pure arithmetic over `(label, pct, resets_at)`
+  triples, no I/O. **`models.py`**: the threshold and priority validators,
+  `AccountPolicy`, and the switch rollback through the atomic writer.
+  **`poll_policy.py`**: urgent polling judged per window. **`settings.py`**:
+  the `weeklyThreshold`, `run.shareHistory` and `updates.check` keys, finite-
+  number clamping, and the atomic writer. **`mappings.py`**,
+  **`json_output.py`**: the atomic writer and a `threshold` field.
+- **`cli.py`**: the `threshold` and `priority` commands (they write
+  `sequence.json` through `set_account_threshold` / `set_account_priority`),
+  `--weekly-threshold`, and `run.shareHistory` as the default for `cswap
+  run`'s existing local history sharing. `updates.check = false` skips the
+  version lookup entirely.
+- **`tui/app.py`, `tui/autoview.py`, `tui/widgets.py`**: display of the new
+  lines and badges only.
 
 **Published `0.28.0`, `0.29.0` == their tags.** `redflag.sh 0.28.0 --baseline
 0.27.2 --repo . --git-ref v0.28.0` and `redflag.sh 0.29.0 --baseline 0.28.0
