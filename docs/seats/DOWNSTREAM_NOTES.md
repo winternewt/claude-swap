@@ -45,25 +45,13 @@ State as of 2026-10-21.
 
 ## Open with the person
 
-- Desk #110 (filed 2026-10-24 for v0.1.89; comments on 2026-10-25 moved it to v0.1.90, v0.1.91, v0.1.92, v0.1.93,
-  v0.1.94, then (2026-10-26) v0.1.95, then (2026-10-27) v0.1.96, v0.1.97 and v0.1.98, then (2026-10-31) v0.1.99, v0.1.100, v0.1.101, v0.1.102 and v0.1.103, then (2026-11-01) v0.1.104 and v0.1.105, then (2026-11-02) v0.1.106, v0.1.107 and v0.1.108, then (2026-11-03) v0.1.109, v0.1.110, v0.1.111, v0.1.112, v0.1.113, v0.1.114, v0.1.115 and v0.1.116, then (2026-11-04) v0.1.117, v0.1.118, v0.1.119, v0.1.120, v0.1.121, v0.1.122, v0.1.123 and v0.1.124, each superseding the last): move the kit pin from v0.1.88 to v0.1.124. Answers: "1" → move, "2" or silence →
-  stay. It gated hard (the repo-rename skill's `persistence` line, and two `pipe to shell` lines that print
-  the person's bootstrap command, never run), read safe (SECURITY_AUDIT.md). Verify the answer on the issue
-  itself; an answer given in chat goes on #110 first, in their words (kit v0.1.114's base rule). On "1": `scripts/kitgate.py v0.1.88 v0.1.124`, confirm its only HARD lines are those five (repo-rename:42,
-  host-move:124, onboard.py:985 and :993, and rules/AUTOMODE.md:143, rule 10's own text), then the
-  move by hand as for v0.1.86 (the tracker's own client, `--copy` gate and move-back, then the row, the
-  commit, the restart), since `--approved` never passes a hard stop. v0.1.91's punch-in refuses a session
-  without the plugin's hooks; this one passes. From v0.1.92 the prompt hook types `/reload-plugins` into the
-  session's herdr pane itself when the pin is ahead. From v0.1.93 the forge gate checks unseated sessions only
-  because `.blueprints.toml` sets `forge_gate_unseated = true`: keep it. From v0.1.96 the watchdog runs that
-  reloader itself every minute. From v0.1.99 the plugin loads a UI module (a status line, a band while the quota
-  hold is on, `/seats-view`). v0.1.100's auto-mode allow entry adds item (9), v0.1.103 extends item (8), and v0.1.108 item (2); from v0.1.115 the items are one entry per rule (`Agent seats kit,
-  rule N`), texts unchanged: the person pastes each rule and the environment entry once, and removes the old single entry
-  after the move. From v0.1.116 the forge gate fails closed: with the pinned plugin copy gone from the cache,
-  every Bash call is blocked until `/reload-plugins`, so never prune the old copy under a running session. v0.1.117 adds auto-mode rules 10 (run the person's own desk
-  bootstrap from a pasted hand-off; a widening, the person's call, not needed here) and 11 (push grant, fast-forward to
-  origin only). v0.1.122 adds the plugin agent fault-finder: spawn it on this repo only on the person's word (a filing
-  run puts findings on the kit's tracker). A later release: gate it against
-  v0.1.88 and update #110 the same way, the comment opening with a bare `**Update:**` line (the desk's
-  protocol line from kit v0.1.98; `**Update (date):**` is not read as one). Until kit v0.1.102 the desk's own reader crashed
-  on a comment holding only that line; the kit fixed it there, the form stays.
+- Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered: on 2026-11-04 the
+  person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
+  #110 as comment 6637218216). They are listed in `scripts/kitgate-accepted.txt` (d6194f2), and the pin moved
+  to v0.1.124 through `kittrack.py move --approved` (d86b621). Left with the person: `/reload-plugins`; the
+  auto-mode rules from `bin/automode.py`, one entry per rule plus the environment entry, the old single
+  allow entry removed; rule 10 (run the desk's bootstrap from a pasted hand-off) left out unless they seat new
+  repos. From v0.1.116 the forge gate fails closed: never prune the old plugin copy under a running session.
+  The plugin agent fault-finder (v0.1.122) runs on this repo only on the person's word. A later release: the
+  watcher names it, `kittrack.py move vNEW --approved 'standing grant 2026-10-21'` once the read is judged safe;
+  a new hard line goes to the person, and #110's form (a bare `**Update:**` line) for any new desk item.
