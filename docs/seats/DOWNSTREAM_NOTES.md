@@ -52,7 +52,7 @@ State as of 2026-11-04.
   `| sh -s {names}{' --overlay' if over else ''}`, the accepted `| sh -s {names} --overlay` line merged with its
   twin. Read safe (SECURITY_AUDIT.md kit table, 5bdb0ec). Default: stay on v0.1.127. On yes: swap the old line for
   the new text in `scripts/kitgate-accepted.txt`, then `kittrack.py move v0.1.136 --approved 'desk #197'` (or the newest), push, and
-  react to the v0.1.128 (637660339), v0.1.129 (637691863), v0.1.130 (637709914), v0.1.131 (637720775), v0.1.132 (637724911), v0.1.133 (637746241), v0.1.134 (637940621) and v0.1.135 (637944017) announcements (v0.1.136 came with no announcement here).
+  react to the v0.1.128 (637660339), v0.1.129 (637691863), v0.1.130 (637709914), v0.1.131 (637720775), v0.1.132 (637724911), v0.1.133 (637746241), v0.1.134 (637940621), v0.1.135 (637944017) and v0.1.136 (637955580) announcements.
 - Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
   #110 as comment 6637218216). They are listed in `scripts/kitgate-accepted.txt` (d6194f2), and the pin moved
