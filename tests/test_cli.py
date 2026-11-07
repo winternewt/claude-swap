@@ -1018,9 +1018,12 @@ class TestCLI:
 
         monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
         monkeypatch.setattr("claude_swap.update_check._detect_install_method", lambda: "uv")
-        assert "uv tool install --force 'claude-swap[menubar]'" in cli._menubar_extra_missing()
+        from claude_swap.update_check import AUDITED_SOURCE
+
+        spec = f"'claude-swap[menubar] @ {AUDITED_SOURCE}'"
+        assert f"uv tool install --force --reinstall {spec}" in cli._menubar_extra_missing()
         monkeypatch.setattr("claude_swap.update_check._detect_install_method", lambda: "pipx")
-        assert "pipx install --force" in cli._menubar_extra_missing()
+        assert f"pipx install --force {spec}" in cli._menubar_extra_missing()
         monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
         assert cli._menubar_extra_missing() is None
 
