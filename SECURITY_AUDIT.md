@@ -4,13 +4,15 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16 and 2026-11-04
+**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16, 2026-11-04 and 2026-11-07
 **Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2`; `0.28.0` and
-`0.29.0` (current stable on PyPI, see
+`0.29.0` (the last adopted; PyPI's stable is now `1.0.0`, see
 [below](#also-audited-0280-and-0290-and-the-fork-merge-babc945));
 the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, its `0.28.0b1` at
 `70dde18`, and its `0.29.0` at `babc945` (git installs, which `cswap upgrade`
 installs through the `audited` tag)
+**Read, not adopted:** `0.30.0` and `1.0.0` (held on the person's desk, #226;
+see [below](#read-held-for-the-person-0300-and-100-and-the-fork-merge-772a72c))
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
 **Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
@@ -469,6 +471,130 @@ unused. The tests that pinned the notice now pin its absence. `uv run pytest
 **Build check:** a wheel built from `git archive babc945` holds exactly
 `src/claude_swap/` at that commit (45 files, byte-identical), no `.pth`, the
 two expected console scripts and the same `Requires-Dist`.
+
+### Read, held for the person: `0.30.0` and `1.0.0`, and the fork merge `772a72c`
+
+Read on 2026-11-07. **Not adopted:** the `audited` marker stays at the code of
+`babc945`. Desk #226 asks the person, and if nobody answers the fork stays on
+`0.29.0`. The merge is ready on the local branch `merge-upstream-v1.0.0`, which
+is not pushed.
+
+**Why it is held: the condition the 0.26.0 verdict rested on is gone.** That
+verdict accepted the macOS LaunchAgent because it was "opt-in, behind one
+explicit command, and nothing installs it for you". Since 1.0.0
+(`7a3168d`), plain `cswap menubar` calls `launch_agent.ensure()`.
+`ensure()` writes `~/Library/LaunchAgents/com.cswap.menubar.plist` on first
+use (`RunAtLoad`, `KeepAlive` on a crash) and bootstraps it.
+`--install-service` is no longer needed. The mitigations:
+
+- macOS only, and only with the `menubar` extra installed.
+- The command prints that the menu bar starts at login and how to remove it.
+- `--foreground` keeps the old behaviour.
+- The menu's "Start at login" toggle moves the plist to the data directory,
+  where launchd does not scan at login.
+- `--uninstall-service`, and `purge`, remove the plist, the logs, launchd's
+  disabled override and the wrapper `.app`.
+
+The plist is written 0600 and atomically. It forwards only the proxy, CA and
+profile variables (`CLAUDE_CONFIG_DIR`, `CLAUDE_SECURESTORAGE_CONFIG_DIR`,
+`XDG_DATA_HOME`). On macOS, `cswap upgrade` now restarts a running menu bar
+(`launchctl kickstart -k`) when the build changed. It reads the build from
+`direct_url.json` through a fresh interpreter.
+
+**Upstream delta:** `v0.29.0 → v1.0.0`, 22 files under `src/`, +4293 / −726.
+`pyproject.toml` drops `keyring` (it was Windows-only, for the retired
+Credential Manager → files migration) and moves the classifier to
+Production/Stable. No new host, no new dependency.
+
+Read in full:
+
+- **`oauth.py`, network.** A new header probe, `request_usage_via_probe`.
+  It sends a POST to `https://api.anthropic.com/v1/messages`: a 1-token Haiku
+  request carrying the account's bearer token, and reads the
+  `anthropic-ratelimit-unified-*` response headers. This is a new kind of
+  request (it spends a little inference), but it goes to a known host. It runs
+  only when the setting `usage.headerProbe` is true (default false; a non-bool
+  is rejected) AND the account is a setup-token (no refresh token, scopes
+  exactly `user:inference`). It has one caller. The rest of the file is
+  stricter parsing of usage responses (`_InvalidUsageResponse`), with no new
+  request.
+- **`subscription.py` (new), network.** A GET to
+  `https://api.anthropic.com/api/oauth/profile` with an already valid access
+  token. It never refreshes a token. It keeps five organization fields, and
+  only when the response's account and organization UUIDs match the slot. The
+  cache is `subscription_plans.json`, written atomically under a lock. A
+  successful read is paced at once per 6 h per account, a failed one at 15 min
+  or more. A pass scoped to one slot still reads every slot that is due, and
+  the token goes only to Anthropic.
+- **`launch_agent.py`** (+701), the persistence above, read whole at
+  `v1.0.0`. Its process calls: `launchctl
+  print/print-disabled/bootstrap/bootout/kickstart/enable`, `sfltool dumpbtm`
+  (read only, to see the System Settings switch) and `ps -o etime`. Each is a
+  fixed argv, with no shell and no user text.
+- **`update_check.py`:** `install_identity` / `_restart_menubar_if_rebuilt`
+  (above). The fork keeps `UPGRADE_COMMANDS` and still drops the cooldown
+  notice.
+- **`app_bundle.py`:** `remove()` deletes the wrapper `.app` from either home,
+  for uninstall.
+- **`credentials.py`:** a file-mode pin is lifted once `.credentials.json` is
+  gone, which re-asks the Keychain under a new lock. `.enc` and stash reads go
+  by bytes. No write path changed.
+- **`fsutil.py`:** link helpers. `make_dir_link` makes a symlink, or a
+  junction on Windows. `remove_link` removes the link, never its target.
+  `is_link` also counts junctions. The 0.29.0 claim stands: `transfer.py`'s
+  export is the only `follow_symlinks=False` writer.
+- **`migrations.py`:** the Windows keyring migration is retired, and the macOS
+  one reads and deletes legacy items through `security`. **`transfer.py`:**
+  clearer import errors only.
+- **`menubar.py`:** a health row, engine-stopped events and the Start-at-login
+  toggle (`set_start_at_login` moves the plist only). The settings file is
+  written atomically, 0600.
+- **`session.py`, `switcher.py`, `cli.py`,** read whole hunk by hunk by a
+  second reader (Opus) at the seat's request:
+  - **`session.py`:** no network. The `claude` exec is unchanged.
+  - **`session.py` links:** history sharing builds symlinks, or junctions on
+    Windows, and stages them as `<item>.cswap-link-staging`. A planted link in
+    the history tree raises instead of being walked. A real (non-link)
+    directory is merged under `.cswap-history-migration.lock`, never deleted.
+    Losing copies go to `backup_dir/history-conflicts/` (0700).
+  - **History sharing is now on by default** (`--no-share-history` or
+    `run.shareHistory false` turns it off). Local only.
+  - **`switcher.py`:** the `fetch_plan` and header-probe call sites, gated as
+    above. Swap and move adopt a rotated credential into the backup through
+    the existing writer. `purge` removes legacy `claude-code` items through
+    `security`, for cswap's own slot names only.
+  - **`cli.py`:** the `menubar` dispatch above. No new subprocess or network
+    call.
+
+Swept by the gate only (display and settings): `autoswitch.py`,
+`json_output.py`, `models.py`, `settings.py` (the `usage.headerProbe` key was
+read), `snapshot_source.py`, `usage_store.py`, `tui/`.
+
+**Published `0.30.0`, `1.0.0` == their tags.** `redflag.sh 0.30.0 --baseline
+0.29.0 --repo . --git-ref v0.30.0` and `redflag.sh 1.0.0 --baseline 0.30.0
+--repo . --git-ref v1.0.0` both report:
+
+- the PyPI SHA256s verify, and all 45 package files match the tag;
+- the wheel and sdist ship identical code;
+- stock hatchling, with no hooks;
+- only known hosts.
+
+The red flags are the delta lines above, read in full.
+
+| Release | Artifact | SHA256 |
+|---|---|---|
+| `0.30.0` | wheel | `2966c9de701688f18df007e45e290772c68cdeb63c0f496951969d65231b452a` |
+| `0.30.0` | sdist | `6c1b92f0d6e09b82361e56c51b7275afc64de08820fb94964ce04d2bd01a3c27` |
+| `1.0.0` | wheel | `19b9d93fdca2fa7792b4d6bd4dfe3be6160d230c3d547fed68c9f15ab707285b` |
+| `1.0.0` | sdist | `527721102fc8733ad7228fa4ccc8c7884720970474e14decbaba52e626a977fd` |
+
+**Fork merge `041a626` + `772a72c` (local, not pushed).** It conflicted in
+`update_check.py`, `tests/conftest.py` and `tests/test_update_check.py`; the
+fork's lines are kept and upstream's added. `772a72c` points the new
+`_menubar_extra_missing` remedy at `AUDITED_SOURCE` instead of PyPI. `uv run
+pytest -q`: 3554 passed, 12 skipped. A wheel built from `git archive 772a72c`
+holds exactly `src/claude_swap/` (46 files, byte-identical), no `.pth`, the
+two console scripts, and `Requires-Dist` without `keyring`.
 
 ### To run exactly the audited version
 

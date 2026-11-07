@@ -1,6 +1,6 @@
 # Downstream seat — notes
 
-State as of 2026-11-04.
+State as of 2026-11-07.
 
 ## Marker
 
@@ -41,13 +41,24 @@ State as of 2026-11-04.
 
 ## Upstream
 
-- Last release adopted: `v0.29.0` (with `v0.28.0`), merged at `babc945` on 2026-11-04. `upstream/main` carries 21
-  more commits past it, not merged; they wait for the next tag. The merge keeps the fork's `UPGRADE_COMMANDS` and
-  drops upstream's release-cooldown notice (it points at `uv tool upgrade`); expect that conflict again in
-  `update_check.py` and `tests/test_update_check.py`.
-
+- Last release adopted: `v0.29.0` (with `v0.28.0`), merged at `babc945` on 2026-11-04.
+- `v0.30.0` and `v1.0.0` (tagged 2026-11-06 and 2026-11-07) were read on 2026-11-07, both published == tag, and are
+  **held on desk #226**: since 1.0.0 plain `cswap menubar` installs the macOS login LaunchAgent on first use, the
+  condition the 0.26.0 verdict rested on (SECURITY_AUDIT.md, "Read, held for the person"). Default: stay on 0.29.0.
+  The merge is ready on the local branch `merge-upstream-v1.0.0` (`041a626` merge, `772a72c` the menubar-extra hint
+  pointed at the audited fork), tests 3554 passed, the build check done. Not pushed.
+  On 1 (adopt as is): merge the branch into main (`git merge --no-ff`), record the adoption in SECURITY_AUDIT.md (the section
+  becomes "Also audited", the header's versions, the marker row with the old commit), push main, move `audited`,
+  `cswap upgrade`, `git branch -d merge-upstream-v1.0.0`. On 2: a fork commit keeping plain `cswap menubar` in the
+  foreground unless a login plist already exists, then the same. On 3 or silence: nothing.
+- The merge keeps the fork's `UPGRADE_COMMANDS` and drops upstream's release-cooldown notice (it points at
+  `uv tool upgrade`); expect that conflict again in `update_check.py` and `tests/test_update_check.py`, and in
+  `tests/conftest.py` beside the usage-server socket line.
 ## Open with the person
 
+- **Desk #226** (filed 2026-11-07, S3): adopt upstream 1.0.0 although plain `cswap menubar` now installs the macOS
+  login LaunchAgent? Options 1 adopt (recommended), 2 adopt with the fork keeping the login start behind
+  `--install-service`, 3 stay on 0.29.0 (the default). The steps for each are under Upstream above.
 - **Desk #197** (filed 2026-11-05, S3; since its third Update, 2026-11-07, asks to accept two lines for v0.1.140: the onboard.py one below and `scripts/wake-corpus.py` `BUTTON = re.compile(r"watchdog\.(?:py|sh)\S*\s+nothing\b")`, a regex the gate reads as a pipe to shell; v0.1.131 to v0.1.141 read safe): kit v0.1.128 stopped on one hard line, `bin/onboard.py:1080`
   `| sh -s {names}{' --overlay' if over else ''}`, the accepted `| sh -s {names} --overlay` line merged with its
   twin. Read safe (SECURITY_AUDIT.md kit table, 5bdb0ec). Default: stay on v0.1.127. On yes: swap the old line for
