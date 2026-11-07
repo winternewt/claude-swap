@@ -579,7 +579,10 @@ read), `snapshot_source.py`, `usage_store.py`, `tui/`.
 - stock hatchling, with no hooks;
 - only known hosts.
 
-The red flags are the delta lines above, read in full.
+The red flags are the delta lines above, read in full. The 1.0.0 lists of
+modules importing network or process machinery are the same as 0.30.0's, and
+its new exec-pattern lines are `cli.py`'s `find_spec("rumps")` and
+`update_check.py`'s `importlib.metadata`, both read.
 
 | Release | Artifact | SHA256 |
 |---|---|---|

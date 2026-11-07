@@ -47,13 +47,15 @@ State as of 2026-11-07.
   condition the 0.26.0 verdict rested on (SECURITY_AUDIT.md, "Read, held for the person"). Default: stay on 0.29.0.
   The merge is ready on the local branch `merge-upstream-v1.0.0` (`041a626` merge, `772a72c` the menubar-extra hint
   pointed at the audited fork), tests 3554 passed, the build check done. Not pushed.
-  On 1 (adopt as is): merge the branch into main (`git merge --no-ff`), record the adoption in SECURITY_AUDIT.md (the section
+  On 1 (adopt as is): merge the branch into main (`git merge --no-ff`), re-run the build check on that merge commit (`git archive` → wheel → byte-compare with its
+  `src/`; the marker names it, not `772a72c`), record the adoption in SECURITY_AUDIT.md (the section
   becomes "Also audited", the header's versions, the marker row with the old commit), push main, move `audited`,
   `cswap upgrade`, `git branch -d merge-upstream-v1.0.0`. On 2: a fork commit keeping plain `cswap menubar` in the
   foreground unless a login plist already exists, then the same. On 3 or silence: nothing.
 - The merge keeps the fork's `UPGRADE_COMMANDS` and drops upstream's release-cooldown notice (it points at
   `uv tool upgrade`); expect that conflict again in `update_check.py` and `tests/test_update_check.py`, and in
   `tests/conftest.py` beside the usage-server socket line.
+
 ## Open with the person
 
 - **Desk #226** (filed 2026-11-07, S3): adopt upstream 1.0.0 although plain `cswap menubar` now installs the macOS
