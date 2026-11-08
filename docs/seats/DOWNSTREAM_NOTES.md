@@ -65,11 +65,12 @@ State as of 2026-11-07.
   `| sh -s {names}{' --overlay' if over else ''}`, the accepted `| sh -s {names} --overlay` line merged with its
   twin. Read safe (SECURITY_AUDIT.md kit table, 5bdb0ec). Default: stay on v0.1.127. On yes: swap the old line for
   the new text in `scripts/kitgate-accepted.txt` and add the wake-corpus.py line, then `kittrack.py move v0.1.144 --approved 'desk #197'` (or the newest), push, and
-  react to the v0.1.128 (637660339), v0.1.129 (637691863), v0.1.130 (637709914), v0.1.131 (637720775), v0.1.132 (637724911), v0.1.133 (637746241), v0.1.134 (637940621), v0.1.135 (637944017), v0.1.136 (637955580), v0.1.137 (638192777), v0.1.138 (638360835), v0.1.139 (638362702), v0.1.140 (638370441), v0.1.141 (638383623), v0.1.142 (638418975), v0.1.143 (638427643) and v0.1.144 (638481274) announcements.
+  react to the v0.1.128 (637660339), v0.1.129 (637691863), v0.1.130 (637709914), v0.1.131 (637720775), v0.1.132 (637724911), v0.1.133 (637746241), v0.1.134 (637940621), v0.1.135 (637944017), v0.1.136 (637955580), v0.1.137 (638192777), v0.1.138 (638360835), v0.1.139 (638362702), v0.1.140 (638370441), v0.1.141 (638383623), v0.1.142 (638418975), v0.1.143 (638427643) and v0.1.144 (638481274) announcements; then `sh <new kit copy>/bin/watchdog.sh reload` and end the turn.
 - Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
   #110 as comment 6637218216). They are listed in `scripts/kitgate-accepted.txt` (d6194f2), and the pin moved
-  to v0.1.124 through `kittrack.py move --approved` (d86b621). Left with the person: `/reload-plugins`; the
+  to v0.1.124 through `kittrack.py move --approved` (d86b621). The reload after a pin move is the seat's, not the person's (kit announcement 638531760, 2026-11-08):
+  in this herdr pane, `sh <new kit copy>/bin/watchdog.sh reload` (v0.1.141 and later), then end the turn. Left with the person: the
   auto-mode rules from `bin/automode.py`, one entry per rule plus the environment entry, the old single
   allow entry removed; rule 10 (run the desk's bootstrap from a pasted hand-off) left out unless they seat new
   repos. From v0.1.116 the forge gate fails closed: never prune the old plugin copy under a running session.
