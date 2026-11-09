@@ -4,15 +4,13 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16, 2026-11-04 and 2026-11-07
+**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16, 2026-11-04, 2026-11-07 and 2026-11-09
 **Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2`; `0.28.0` and
-`0.29.0` (the last adopted; PyPI's stable is now `1.0.0`, see
-[below](#also-audited-0280-and-0290-and-the-fork-merge-babc945));
+`0.29.0`; `0.30.0` and `1.0.0` (the last adopted, see
+[below](#also-audited-0300-and-100-and-the-fork-merge-41cc1fb));
 the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, its `0.28.0b1` at
-`70dde18`, and its `0.29.0` at `babc945` (git installs, which `cswap upgrade`
-installs through the `audited` tag)
-**Read, not adopted:** `0.30.0` and `1.0.0` (held on the person's desk, #226;
-see [below](#read-held-for-the-person-0300-and-100-and-the-fork-merge-772a72c))
+`70dde18`, its `0.29.0` at `babc945`, and its `1.0.0` at `41cc1fb` (git installs, which
+`cswap upgrade` installs through the `audited` tag)
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
 **Method:** re-audit of the `0.25.0 → 0.26.0` delta (7 files, +801 / −20 lines
@@ -472,14 +470,23 @@ unused. The tests that pinned the notice now pin its absence. `uv run pytest
 `src/claude_swap/` at that commit (45 files, byte-identical), no `.pth`, the
 two expected console scripts and the same `Requires-Dist`.
 
-### Read, held for the person: `0.30.0` and `1.0.0`, and the fork merge `772a72c`
+### Also audited: `0.30.0` and `1.0.0`, and the fork merge `41cc1fb`
 
-Read on 2026-11-07. **Not adopted:** the `audited` marker stays at the code of
-`babc945`. Desk #226 asks the person, and if nobody answers the fork stays on
-`0.29.0`. The merge is ready on the local branch `merge-upstream-v1.0.0`, which
-is not pushed.
+Read on 2026-11-07, held on the person's desk (#226), **adopted on 2026-11-09**
+on their answer, option 1: "I don't care about any Mac-specific behaviors, I
+don't have Macs. Autoaccept. Linux affecting ones only." The fork merge is
+`41cc1fb` (`git merge --no-ff` of the branch below into main; its `src/`,
+`tests/`, `pyproject.toml` and `uv.lock` equal `772a72c`'s). A wheel built from
+`git archive 41cc1fb` with `uv build` holds exactly `src/claude_swap/` (46
+files, byte-identical), no `.pth`, the two console scripts, and `Requires-Dist`
+`textual`, `truststore` and `rumps` (the `menubar` extra) only.
 
-**Why it is held: the condition the 0.26.0 verdict rested on is gone.** That
+**On this Linux machine** nothing below starts at login, and history sharing
+(further down) changes nothing: this machine switches accounts inside the one
+`~/.claude` and has no `cswap run` profiles (no `sessions/` folder in the
+data directory, checked 2026-11-09), so there is nothing to merge or link.
+
+**Why it was held: the condition the 0.26.0 verdict rested on is gone.** That
 verdict accepted the macOS LaunchAgent because it was "opt-in, behind one
 explicit command, and nothing installs it for you". Since 1.0.0
 (`7a3168d`), plain `cswap menubar` calls `launch_agent.ensure()`.
@@ -602,17 +609,17 @@ two console scripts, and `Requires-Dist` without `keyring`.
 ### To run exactly the audited version
 
 ```bash
-uv tool install 'claude-swap==0.29.0'      # current stable — verified clean
+uv tool install 'claude-swap==1.0.0'       # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@babc945b415545cf1c127ab2950ab032fcf84318'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@41cc1fb55d0c8718052781b5c011a46dc7e94965'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `babc945` that touches `src/` or `pyproject.toml` is
+Any commit after `41cc1fb` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `babc945`'s: the commits after it touch only this file,
-`docs/seats/` and `.claude/settings.json`.
+sentence. Its code is `41cc1fb`'s: the commits after it touch only this file
+and `docs/`.
 
 **Marker history** (the old commit is recorded here before each move, as the
 seat's grant requires):
@@ -621,7 +628,8 @@ seat's grant requires):
 |---|---|---|---|
 | 2026-10-16 | (new) | `d138f8d` | `70dde18` |
 | 2026-10-16 | `d138f8d` | `a2b2f43` | `59d9ffb` |
-| 2026-11-04 | `a2b2f43` | the commit adding this row | `babc945` |
+| 2026-11-04 | `a2b2f43` | `57d54c1` | `babc945` |
+| 2026-11-09 | `57d54c1` | the commit adding this row | `41cc1fb` |
 
 ---
 
