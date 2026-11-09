@@ -1,6 +1,6 @@
 # Downstream seat — notes
 
-State as of 2026-11-07.
+State as of 2026-11-10.
 
 ## Marker
 
@@ -27,8 +27,10 @@ State as of 2026-11-07.
      once: `move vNEW --approved 'standing grant 2026-10-21'`; an unsafe one goes to the person. Once the
      watcher says the kit reads without credentials, the grant is over: put each read to the person
      (chat, or the desk when away, default "stay on vOLD"), and on their yes `move vNEW --approved
-     'WHERE'`. It passes a read, never a 3 or a 4. Exit 3 or 4: put to the person, recommending against
-     unless the reading explains it.
+     'WHERE'`. It passes a read, never a 3 or a 4. Exit 4 while the kit is private (the person, 2026-11-09, desk
+     #197: "you trust it w/o question"): read each hard line in full; safe, list it in
+     `scripts/kitgate-accepted.txt` with the row, commit, and `move vNEW --approved 'standing grant 2026-11-09'`.
+     A moved tag, an installed copy unlike its tag, or exit 3: put to the person (docs/seats/DOWNSTREAM.md).
   3. Exit 0: `git push origin main`, `watchdog.py react ID` on the announcement if there is one, and
      the move in the chat in one line.
 
@@ -53,11 +55,7 @@ State as of 2026-11-07.
 
 ## Open with the person
 
-- **Desk #197** (filed 2026-11-05, S3; since its third Update, 2026-11-07, asks to accept two lines for v0.1.140: the onboard.py one below and `scripts/wake-corpus.py` `BUTTON = re.compile(r"watchdog\.(?:py|sh)\S*\s+nothing\b")`, a regex the gate reads as a pipe to shell; v0.1.131 to v0.1.152 read safe; its fourth Update, 2026-11-09 (comment 6735560948), adds the three `echo` lines of v0.1.147's `classes/desk/template/setup.sh` (lines 80, 81, 92) that print the desk mover's crontab instructions, so a yes accepts five lines): kit v0.1.128 stopped on one hard line, `bin/onboard.py:1080`
-  `| sh -s {names}{' --overlay' if over else ''}`, the accepted `| sh -s {names} --overlay` line merged with its
-  twin. Read safe (SECURITY_AUDIT.md kit table, 5bdb0ec). Default: stay on v0.1.127. On yes: swap the old line for
-  the new text in `scripts/kitgate-accepted.txt` and add the wake-corpus.py line and the three setup.sh lines, then `kittrack.py move v0.1.152 --approved 'desk #197'` (or the newest), push, and
-  react to the v0.1.128 (637660339), v0.1.129 (637691863), v0.1.130 (637709914), v0.1.131 (637720775), v0.1.132 (637724911), v0.1.133 (637746241), v0.1.134 (637940621), v0.1.135 (637944017), v0.1.136 (637955580), v0.1.137 (638192777), v0.1.138 (638360835), v0.1.139 (638362702), v0.1.140 (638370441), v0.1.141 (638383623), v0.1.142 (638418975), v0.1.143 (638427643), v0.1.144 (638481274), v0.1.145 (638594313), v0.1.146 (638611014), v0.1.147 (638643109), v0.1.148 (638828036), v0.1.149 (638840794), v0.1.150 (638846361), v0.1.151 (638850677) and v0.1.152 (638864945) announcements; then `sh <new kit copy>/bin/watchdog.sh reload` and end the turn.
+- Desk #197 is answered (2026-11-09, comment 6753689868): the five lines accepted, the pin moved to v0.1.153.
 - Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
   #110 as comment 6637218216). They are listed in `scripts/kitgate-accepted.txt` (d6194f2), and the pin moved
@@ -68,4 +66,4 @@ State as of 2026-11-07.
   repos. From v0.1.116 the forge gate fails closed: never prune the old plugin copy under a running session.
   The plugin agent fault-finder (v0.1.122) runs on this repo only on the person's word. A later release: the
   watcher names it, `kittrack.py move vNEW --approved 'standing grant 2026-10-21'` once the read is judged safe;
-  a new hard line goes to the person, and #110's form (a bare `**Update:**` line) for any new desk item.
+  a new hard line is read and accepted by the seat while the kit is private (step 2 above).
