@@ -2,7 +2,8 @@
 # Each entry is a category, the file, and the line's whole text, stripped, separated by tabs. It matches by
 # exact text in that file: a line that changes in any way, or appears in another file, is hard again. Line
 # numbers are not kept: they move.
-# Added only with a reading recorded in SECURITY_AUDIT.md and the person's word for it.
+# Added only with a reading recorded in SECURITY_AUDIT.md. While the kit is private the seat adds a line read safe
+# itself (the person, 2026-11-09, desk #197; docs/TRUST.md); once it is public, only on the person's word.
 #
 # 2026-11-04, the person: "mark these lines as benign, there's no decision from me here, you determined these
 # lines as safe yourself". Read safe from v0.1.89 to v0.1.124 (SECURITY_AUDIT.md): a skill's checklist naming

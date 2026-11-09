@@ -53,7 +53,20 @@ recorded in `SECURITY_AUDIT.md` before the push. Never a `v*` tag.
 ## What goes to the person's desk
 
 A red flag (the role, step 5), with the evidence and the default "stay on the last marker". A question
-asked in chat while they are present.
+asked in chat while they are present. Two kinds of finding usually do not go, and are adopted on the read:
+
+- **A Mac-only change upstream** (a launchd agent, the menu bar, the Keychain, a `security` call): read and
+  recorded in `SECURITY_AUDIT.md` as before, then adopted. Only what can run on Linux goes to the person, and
+  that includes a persistence on Linux. Why: the person, 2026-11-09, on desk #226: "from here and on, I don't
+  care about any Mac-specific behaviors, I don't have Macs. Autoaccept. Linux affecting ones only". Agreed.
+- **A line of the seats kit that the gate stops on (exit 4), while the kit is private**: read in full and, when
+  the reading finds it safe, listed in `scripts/kitgate-accepted.txt` by the seat itself with the reading's
+  row in `SECURITY_AUDIT.md`, and the pin moved (`kittrack.py move vNEW --approved 'standing grant
+  2026-11-09'`). The person steers the kit, and while it is private the seat trusts its content without asking.
+  An integrity failure is not content and still stops the move and goes to the person: a moved tag, or an
+  installed copy unlike its tag. Why: the person, 2026-11-09, on desk #197: "I already told you that I steer
+  kit, and while kit is private you trust it w/o question. Such items waste my time". Agreed; the gate
+  (`scripts/kittrack.py`) still enforces the listing.
 
 ## Day line
 

@@ -54,8 +54,11 @@ one itself.
     verdict of unsafe still stops the move and goes to the person. The grant ends when the kit's
     repository reads without credentials, which the watcher checks on every poll and says; from
     then on each read is put to the person and the pin stays meanwhile;
-  - **hard** (exit 4) or **unknown** (exit 3): the pin stays, and the person decides with the hunks.
-    The grant above does not reach these: a moved tag or an installed copy unlike its tag is hard.
+  - **hard** (exit 4) or **unknown** (exit 3): the pin stays. While the kit is private, a hard line of the
+    kit's content is read like a read hunk, and on a safe verdict the seat lists it in
+    `scripts/kitgate-accepted.txt` itself and moves (the person, 2026-11-09: "while kit is private you trust it
+    w/o question. Such items waste my time"; `--approved 'standing grant 2026-11-09'`). A moved tag or an
+    installed copy unlike its tag is not content: the pin stays and the person decides with the hunks.
     A hard line the person accepted after its reading is listed in `scripts/kitgate-accepted.txt`
     by category, file and whole text, and the gate lists it as read; a changed line, or the same
     text in another file, is hard again (the person, 2026-11-04: five lines that stopped every
