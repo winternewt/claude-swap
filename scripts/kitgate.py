@@ -58,6 +58,7 @@ COPY_EXTRA = re.compile(r"(^|/)__pycache__/|\.pyc$|^\.in_use(/|$)")
 # Hard lines the person accepted after a recorded reading: listed as read, matched by category, file and exact
 # text (tab separated, the line stripped), so a change to the line, or the same text in another file, is hard again.
 ACCEPTED = Path(__file__).resolve().parent / "kitgate-accepted.txt"
+NEW_HOST = "new network host"  # a host no line of the old release names; accepted like a hard line, line by line
 
 HARD, READ = "hard", "read"
 CATEGORIES = [
@@ -190,7 +191,8 @@ def accepted(path: Path) -> set[tuple[str, str, str]]:
         if not raw.strip() or raw.startswith("#"):
             continue
         parts = raw.split("\t", 2)
-        if len(parts) != 3 or parts[0] not in {c for _, c, _ in CATEGORIES} or not parts[1] or not parts[2].strip():
+        if len(parts) != 3 or parts[0] not in {c for _, c, _ in CATEGORIES} | {NEW_HOST} or not parts[1] \
+                or not parts[2].strip():
             raise Unknown(f"{path.name}:{n}: not a category, a file and a line, tab separated")
         out.add((parts[0], parts[1], parts[2].strip()))
     return out
@@ -251,7 +253,13 @@ def main() -> int:
           + (f"; installed copy {a.copy} held against the tag" if a.copy else ""))
 
     for h in sorted(hosts(new) - hosts(old)):
-        hard.append(f"new network host: {h}")
+        # accepted only when every line naming it is listed, by file and whole text, like a hard line
+        naming = [(path, n, line) for path, n, line in lines(new)
+                  if h in {x.lower().rstrip(".") for x in HOST.findall(line)}]
+        if naming and all((NEW_HOST, path, line) in ok for path, _, line in naming):
+            read.append(f"accepted {NEW_HOST}: {h}: " + ", ".join(f"{p}:{n}" for p, n, _ in naming[:3]))
+        else:
+            hard.append(f"{NEW_HOST}: {h}")
     d0, d1 = runtime_deps(old), runtime_deps(new)
     if d0 != d1:
         hard.append(f"runtime dependencies changed: [{d0}] -> [{d1}]")

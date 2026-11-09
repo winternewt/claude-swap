@@ -175,6 +175,26 @@ def test_an_acceptance_covers_its_own_category_only(kit, tmp_path):
     assert gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok)).returncode == 4
 
 
+HOSTLINE = 'repo = re.sub(r"^https://github\\.com/|\\.git$", "", repo)'
+
+
+def test_an_accepted_host_line_is_read_not_hard(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/move.py": HOSTLINE + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"new network host\tbin/move.py\t{HOSTLINE}\n")
+    r = gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok))
+    assert r.returncode == 1, r.stdout
+    assert "READ  accepted new network host: github: bin/move.py:1" in r.stdout
+
+
+def test_a_host_named_by_one_more_line_is_hard_again(kit, tmp_path):
+    release(kit, "v0.1.1", {"bin/move.py": HOSTLINE + "\n", "bin/send.py": HOSTLINE + "\n"})
+    ok = tmp_path / "accepted.txt"
+    ok.write_text(f"new network host\tbin/move.py\t{HOSTLINE}\n")
+    r = gate(kit, "v0.1.0", "v0.1.1", "--accepted", str(ok))
+    assert r.returncode == 4 and "HARD  new network host: github\n" in r.stdout, r.stdout
+
+
 def test_a_malformed_accepted_list_is_unknown(kit, tmp_path):
     release(kit, "v0.1.1", {"docs/NOTES.md": "x\n"})
     ok = tmp_path / "accepted.txt"
