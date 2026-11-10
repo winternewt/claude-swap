@@ -26,3 +26,9 @@ persistence	classes/desk/template/setup.sh	echo "A host that refuses a user cron
 # 2026-11-10, the seat under the person's grant of 2026-11-09 (docs/TRUST.md): v0.1.154's move-to-tag.py strips a
 # GitHub URL prefix with a regex, which the gate reads as a new host "github"; the kit already reaches GitHub through gh.
 new network host	bin/move-to-tag.py	repo = re.sub(r"^https://github\.com/|\.git$", "", repo)
+#
+# 2026-11-10, the seat under the person's grant of 2026-11-09: v0.1.155's seatkeys.py says "keyring" of a seat's own
+# GnuPG home ($XDG_STATE_HOME/.../keys/<repo>/<seat>/), never the person's ~/.gnupg.
+foreign secret	classes/base/seatkeys.py	keyring, and contacts.json beside it: each primary key's fingerprint and whose seat the importer said it is,
+foreign secret	classes/base/seatkeys.py	"state": "key missing from the keyring" if key is None else
+foreign secret	classes/base/seatkeys.py	raise Refused(f"{full}'s key is among the contacts but not in the keyring: import it again")
