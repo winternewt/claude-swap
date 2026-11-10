@@ -22,6 +22,9 @@ pipe to shell	scripts/wake-corpus.py	BUTTON = re.compile(r"watchdog\.(?:py|sh)\S
 persistence	classes/desk/template/setup.sh	echo "Then install its mover, on the one host that keeps this clone (crontab -e). Cron starts a line with none of your"
 persistence	classes/desk/template/setup.sh	echo "shell's environment, so put these lines at the top of the crontab, as this shell has them (#314):"
 persistence	classes/desk/template/setup.sh	echo "A host that refuses a user crontab (a cluster's login node) runs the same lines on another timer: the kit's"
+persistence	classes/desk/template/setup.sh	echo "secretary is seated on no always-on machine needs cron instead, on the one host that keeps this clone (crontab -e)."
+persistence	classes/desk/template/setup.sh	echo "Cron starts a line with none of your shell's environment, so put these lines at the top of the crontab, as this"
+persistence	classes/desk/template/setup.sh	echo "twice as often. A host that refuses a user crontab (a cluster's login node) needs no cron where the secretary runs;"
 #
 # 2026-11-10, the seat under the person's grant of 2026-11-09 (docs/TRUST.md): v0.1.154's move-to-tag.py strips a
 # GitHub URL prefix with a regex, which the gate reads as a new host "github"; the kit already reaches GitHub through gh.
