@@ -19,6 +19,9 @@ pipe to shell	rules/AUTOMODE.md	{desk} Agent seats kit, rule 10, last changed 20
 # its twin), a regex matching the seat's own button command, and setup.sh's crontab steps printed for the person.
 pipe to shell	bin/onboard.py	f"| sh -s {names}{' --overlay' if over else ''}\n\n"
 pipe to shell	scripts/wake-corpus.py	BUTTON = re.compile(r"watchdog\.(?:py|sh)\S*\s+nothing\b")  # the button, the seat's own "needed nothing"
+pipe to shell	bin/onboard.py	f"| sh -s {names}{flag}\n\n"
+pipe to shell	commands/take.md	requests and leaves them for the person. The long line (`gh api '.../seating/bootstrap.sh?ref=<commit>' ... | sh -s
+pipe to shell	skills/levers/SKILL.md	| "the seat-builder says my ticket waits", "set up the X seat here", the long `gh api ... \| sh -s X` line relayed | `/seats:take SEAT... [--overlay] [--merge]` | the desk's bootstrap fetched at its commit and run in this clone for the seats (the kit pinned, the ticket joined, the pull request opened), then the first seat punched in; refuses a seat the clone declares or this machine holds already (#382) |
 persistence	classes/desk/template/setup.sh	echo "Then install its mover, on the one host that keeps this clone (crontab -e). Cron starts a line with none of your"
 persistence	classes/desk/template/setup.sh	echo "shell's environment, so put these lines at the top of the crontab, as this shell has them (#314):"
 persistence	classes/desk/template/setup.sh	echo "A host that refuses a user crontab (a cluster's login node) runs the same lines on another timer: the kit's"
