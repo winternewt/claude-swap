@@ -39,3 +39,4 @@ new network host	bin/move-to-tag.py	repo = re.sub(r"^https://github\.com/|\.git$
 foreign secret	classes/base/seatkeys.py	keyring, and contacts.json beside it: each primary key's fingerprint and whose seat the importer said it is,
 foreign secret	classes/base/seatkeys.py	"state": "key missing from the keyring" if key is None else
 foreign secret	classes/base/seatkeys.py	raise Refused(f"{full}'s key is among the contacts but not in the keyring: import it again")
+obfuscation	rules/TRUST.md	code that loads the weights (a pickle runs code as it loads: the published weights come from the vendor's own
