@@ -12,7 +12,7 @@ State as of 2026-11-10.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.198; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.199; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
   2026-10-18: "build the gate and threat model, this repo is sensitive"; 2026-10-21: the kit can no
   longer move this pin, so the seat tracks it itself). The trigger is the seat's watcher
