@@ -59,6 +59,12 @@ asked in chat while they are present. Two kinds of finding usually do not go, an
   recorded in `SECURITY_AUDIT.md` as before, then adopted. Only what can run on Linux goes to the person, and
   that includes a persistence on Linux. Why: the person, 2026-11-09, on desk #226: "from here and on, I don't
   care about any Mac-specific behaviors, I don't have Macs. Autoaccept. Linux affecting ones only". Agreed.
+- **A Linux-affecting change that is no red flag** (a fix or a new behaviour in how logins, backups or usage
+  polling work on Linux): adopted on the read, as step 4 says, never held for the person. What it changes on
+  Linux is told to them afterwards as an informational changelog, in plain words, one line per change, never a
+  question: in the weekly retro where this seat runs one, else in the session's report of the adoption. Why: the
+  person, 2026-11-15, after 1.1.0 was adopted unasked: "I would like some informational changelog maybe, not a
+  blocking one. As part of weekly retro if it is done, in the session if not". Agreed: nothing checks it.
 - **A line of the seats kit that the gate stops on (exit 4), while the kit is private**: read in full and, when
   the reading finds it safe, listed in `scripts/kitgate-accepted.txt` by the seat itself with the reading's
   row in `SECURITY_AUDIT.md`, and the pin moved (`kittrack.py move vNEW --approved 'standing grant
