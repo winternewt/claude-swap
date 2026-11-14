@@ -56,7 +56,7 @@ State as of 2026-11-10.
 ## Open with the person
 
 - Desk #197 is answered (2026-11-09, comment 6753689868): the five lines accepted, the pin moved to v0.1.153.
-- Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered: on 2026-11-04 the
+- Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered, and withdrawn as decided elsewhere on 2026-11-14 at the secretary's nightly sweep: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
   #110 as comment 6637218216). They are listed in `scripts/kitgate-accepted.txt` (d6194f2), and the pin moved
   to v0.1.124 through `kittrack.py move --approved` (d86b621). The reload after a pin move is the seat's, not the person's (kit announcement 638531760, 2026-11-08):
