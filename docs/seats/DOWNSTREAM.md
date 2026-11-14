@@ -56,8 +56,8 @@ A red flag (the role, step 5), with the evidence and the default "stay on the la
 asked in chat while they are present. Two kinds of finding usually do not go, and are adopted on the read:
 
 - **A Mac-only change upstream** (a launchd agent, the menu bar, the Keychain, a `security` call): read and
-  recorded in `SECURITY_AUDIT.md` as before, then adopted. Only what can run on Linux goes to the person, and
-  that includes a persistence on Linux. Why: the person, 2026-11-09, on desk #226: "from here and on, I don't
+  recorded in `SECURITY_AUDIT.md` as before, then adopted. Of what can run on Linux, only a red flag goes to
+  the desk, a persistence on Linux included; the rest is the next item. Why: the person, 2026-11-09, on desk #226: "from here and on, I don't
   care about any Mac-specific behaviors, I don't have Macs. Autoaccept. Linux affecting ones only". Agreed.
 - **A Linux-affecting change that is no red flag** (a fix or a new behaviour in how logins, backups or usage
   polling work on Linux): adopted on the read, as step 4 says, never held for the person. What it changes on
