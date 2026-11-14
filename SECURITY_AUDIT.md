@@ -986,3 +986,4 @@ on a new machine, which nothing here runs.
 | 2026-11-14 | v0.1.207 → v0.1.208 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
 | 2026-11-14 | v0.1.208 → v0.1.209 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
 | 2026-11-14 | v0.1.209 → v0.1.210 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
+| 2026-11-15 | v0.1.210 → v0.1.211 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
