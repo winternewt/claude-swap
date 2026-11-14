@@ -43,8 +43,9 @@ State as of 2026-11-10.
 
 ## Upstream
 
-- Last release adopted: `v1.0.0` (with `v0.30.0`), merged at `41cc1fb` on 2026-11-09 on the person's answer to desk
-  #226 (option 1). Upstream `main` has commits past `v1.0.0`, untagged; the next tag is the next pass.
+- Last release adopted: `v1.1.0`, merged at `313ec51` on 2026-11-14, on the read (no red flag; the person away).
+  Before it, `v1.0.0` at `41cc1fb` on the person's answer to desk #226. Upstream `main` has commits past `v1.1.0`,
+  untagged; the next tag is the next pass.
 - **Mac-only changes are accepted without asking** (the person, 2026-11-09: "I don't care about any Mac-specific
   behaviors, I don't have Macs. Autoaccept. Linux affecting ones only"): a launchd agent, the menu bar, Keychain,
   `security` calls are read and recorded as before, then adopted on the read. Only what can run on Linux goes to

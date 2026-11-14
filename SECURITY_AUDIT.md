@@ -4,12 +4,13 @@
 backdoor? It handles Claude Code OAuth tokens, so the bar is: tokens must never
 leave the machine except to Anthropic's own endpoints.
 
-**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16, 2026-11-04, 2026-11-07 and 2026-11-09
+**Audit date:** 2026-10-08, extended 2026-10-10, 2026-10-16, 2026-11-04, 2026-11-07, 2026-11-09 and 2026-11-14
 **Versions audited:** `0.26.0`; `0.27.0`, `0.27.1` and `0.27.2`; `0.28.0` and
-`0.29.0`; `0.30.0` and `1.0.0` (the last adopted, see
-[below](#also-audited-0300-and-100-and-the-fork-merge-41cc1fb));
+`0.29.0`; `0.30.0` and `1.0.0` (see
+[below](#also-audited-0300-and-100-and-the-fork-merge-41cc1fb)); `1.1.0` (the last adopted, see
+[below](#also-audited-110-and-the-fork-merge-313ec51));
 the fork's `0.27.0b1` at commits `33bb12f` and `5a2211f`, its `0.28.0b1` at
-`70dde18`, its `0.29.0` at `babc945`, and its `1.0.0` at `41cc1fb` (git installs, which
+`70dde18`, its `0.29.0` at `babc945`, and its `1.0.0` at `41cc1fb`, and its `1.1.0` at `313ec51` (git installs, which
 `cswap upgrade` installs through the `audited` tag)
 **Previous audits:** 2026-08-14 (`0.25.0`), 2026-06-25 (`0.14.0` / `0.15.0b1`)
 **Auditor:** independent review on the `winternewt` fork
@@ -606,19 +607,85 @@ pytest -q`: 3554 passed, 12 skipped. A wheel built from `git archive 772a72c`
 holds exactly `src/claude_swap/` (46 files, byte-identical), no `.pth`, the
 two console scripts, and `Requires-Dist` without `keyring`.
 
+### Also audited: `1.1.0`, and the fork merge `313ec51`
+
+Read on 2026-11-14 by the `downstream` seat while the person was away, and
+**adopted on the read**: the role's step 4, since nothing in it is a red flag
+(no new host, process, persistence or dependency; the published artifacts
+equal the tag). `v1.0.0 → v1.1.0` is 38 upstream commits, 18 files under
+`src/`, +1510 / −211; `pyproject.toml` changes only the version.
+
+Read in full, the lines the gate flagged and the code around them:
+
+- **`oauth.py`, network, same host.** A second header probe,
+  `_add_scoped_limits`, sends one more 1-token `/v1/messages` request per
+  poll to `claude-fable-5-1` on `api.anthropic.com` with the same bearer token
+  as the existing Haiku probe, to read Fable's weekly bucket. **Off by
+  default**: only with `usage.fableProbe` set (settings.py, `fable_probe:
+  bool = False`), and paused while that bucket reads as spent, or when the
+  main probe says rejected. Nothing new is sent and no new host is reached;
+  with the setting on, each poll spends a token of Fable usage.
+- **`paths.py` / `credentials.py`, credential writes.** The active credentials
+  file now follows `CLAUDE_SECURESTORAGE_CONFIG_DIR` when it is set, as
+  Claude Code does, written atomically through the existing writer. Unset on
+  this machine (checked 2026-11-14), so the path is the same as before.
+- **`session.py`, environment.** `_default_login_signed_out` pops
+  `CLAUDE_CONFIG_DIR` for one local read of the default login and puts it back
+  in a `finally`; a non-empty `CLAUDE_SECURESTORAGE_CONFIG_DIR` short-circuits
+  it. Used by `cswap run` to launch the session's profile when the default
+  login is signed out (#563). No network, no new exec.
+- **`claude_locks.py`.** Stale-lock takeover uses `lstat` and `unlink`s a file
+  or symlink planted at the takeover path instead of following it; sleeps are
+  clamped to the remaining budget; a failing keep-alive touch warns instead
+  of letting the lock go silently stale. Tightens.
+- **`switcher.py`.** `_rescue_foreign_successor` (#489, #523) writes the live
+  credential into the slot it belongs to, only when its `expiresAt` is
+  strictly newer than that slot's stored backup and it holds a full token
+  pair, after the safety copy is written; it writes nothing into the current
+  slot. A switch with `CLAUDE_CONFIG_DIR=~/.claude` no longer deletes the
+  login made without the variable (#582); usage polling from another profile
+  no longer refreshes the default login (#433); backups survive incompatible
+  live stores (#384). Local only, into the user's own slots.
+- **macOS only, adopted on the read:** another profile's Keychain item is no
+  longer written (#357); menu bar display.
+
+Swept by the gate only (display, settings and docs): `autoswitch.py` (room
+ranking for auto-switch targets), `cli.py`, `json_output.py`, `lines.py`,
+`locking.py`, `models.py`, `poll_policy.py`, `settings.py` (an unread key is
+named), `tui/`. No added line spawns a process.
+
+**Published `1.1.0` == its tag.** `redflag.sh 1.1.0 --baseline 1.0.0 --repo .
+--git-ref v1.1.0`: the PyPI SHA256s verify, all 45 package files match the
+tag, the wheel and sdist ship identical code, only known hosts. Its one red
+flag is the 10 delta lines above, read; runtime dependencies are unchanged.
+
+| Release | Artifact | SHA256 |
+|---|---|---|
+| `1.1.0` | wheel | `3fb3267272a8396b3d24ae04882a3d858a69fe7f2763a9d4d4716b92595bc355` |
+| `1.1.0` | sdist | `54ce53b4f15519f8b3c0b0cba75c5ed680270ccd3b25da931bbc30b3d5146a67` |
+
+**Fork merge `313ec51`** (`git merge --no-ff v1.1.0`). It conflicted in
+`.gitignore` only, both entries kept. `pyproject.toml` and `uv.lock` equal
+the tag's, and the fork's own `src/` patch on top of upstream is line for
+line the one `41cc1fb` carried. `uv run pytest -q`: 3826 passed, 12 skipped.
+A wheel built from `git archive 313ec51` with `uv build` holds exactly
+`src/claude_swap/` (46 files, byte-identical), no `.pth`, the two console
+scripts, and `Requires-Dist` `textual`, `truststore` and `rumps` (the
+`menubar` extra) only.
+
 ### To run exactly the audited version
 
 ```bash
-uv tool install 'claude-swap==1.0.0'       # current stable — verified clean
+uv tool install 'claude-swap==1.1.0'       # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@41cc1fb55d0c8718052781b5c011a46dc7e94965'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@313ec512d078c5718e6634ae5d589a7b4d43aa34'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `41cc1fb` that touches `src/` or `pyproject.toml` is
+Any commit after `313ec51` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `41cc1fb`'s: the commits after it touch only this file
+sentence. Its code is `313ec51`'s: the commits after it touch only this file
 and `docs/`.
 
 **Marker history** (the old commit is recorded here before each move, as the
@@ -629,7 +696,8 @@ seat's grant requires):
 | 2026-10-16 | (new) | `d138f8d` | `70dde18` |
 | 2026-10-16 | `d138f8d` | `a2b2f43` | `59d9ffb` |
 | 2026-11-04 | `a2b2f43` | `57d54c1` | `babc945` |
-| 2026-11-09 | `57d54c1` | the commit adding this row | `41cc1fb` |
+| 2026-11-09 | `57d54c1` | `4f6b2bd` | `41cc1fb` |
+| 2026-11-14 | `4f6b2bd` | the commit adding this row | `313ec51` |
 
 ---
 
