@@ -1,12 +1,12 @@
 # Downstream seat — notes
 
-State as of 2026-11-10.
+State as of 2026-11-15.
 
 ## Marker
 
-- `audited` (a tag) → the commit that moved it on 2026-11-04. Its code is `babc945` (the merge of upstream
-  `v0.29.0`, gated); before that it pointed at `a2b2f43` (code `59d9ffb`). The history is in SECURITY_AUDIT.md's
-  marker table.
+- `audited` (a tag) → `f5b8237`, the record of the upstream `v1.1.0` adoption, moved on 2026-11-14 from `4f6b2bd`.
+  Its code is `313ec51` (the merge of upstream `v1.1.0`, gated, rebuilt byte-identical). The history is in
+  SECURITY_AUDIT.md's marker table; `cswap upgrade` installed it here (1.1.0).
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
 
@@ -46,10 +46,10 @@ State as of 2026-11-10.
 - Last release adopted: `v1.1.0`, merged at `313ec51` on 2026-11-14, on the read (no red flag; the person away).
   Before it, `v1.0.0` at `41cc1fb` on the person's answer to desk #226. Upstream `main` has commits past `v1.1.0`,
   untagged; the next tag is the next pass.
-- **Mac-only changes are accepted without asking** (the person, 2026-11-09: "I don't care about any Mac-specific
-  behaviors, I don't have Macs. Autoaccept. Linux affecting ones only"): a launchd agent, the menu bar, Keychain,
-  `security` calls are read and recorded as before, then adopted on the read. Only what can run on Linux goes to
-  the person.
+- **Mac-only changes are accepted without asking** (the person, 2026-11-09, desk #226), and **a Linux change that is
+  no red flag is adopted on the read too**, then told to the person as an informational changelog in the session's
+  report (the person, 2026-11-15; this seat runs no weekly retro). Only a red flag goes to the desk. See
+  docs/seats/DOWNSTREAM.md, "What goes to the person's desk".
 - The merge keeps the fork's `UPGRADE_COMMANDS` and drops upstream's release-cooldown notice (it points at
   `uv tool upgrade`); expect that conflict again in `update_check.py` and `tests/test_update_check.py`, and in
   `tests/conftest.py` beside the usage-server socket line.
