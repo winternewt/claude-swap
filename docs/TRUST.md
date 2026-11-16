@@ -31,6 +31,14 @@ one itself.
   which reads `~/.claude/.credentials.json` and sends the access token to `api.anthropic.com`, a URL
   that `QUOTA_URL` can override. Its skills, commands and agents when called. And its instructions
   (the base, the downstream role, its rules), which steer every session here.
+- **What the pin no longer governs: the seat's watchdog** (from v0.1.227). Every seat on this machine runs as a
+  thread of one watchdog process, at the machine's kit pin or else the newest kit pin of any clone on this machine,
+  not at this repository's pin, so it may run a release before this gate reads it. The person settled that the
+  watchdog's version is not part of this repository's gate, which guards what runs inside this repository's own
+  sessions: its hooks, instructions and skills (the kit's D205, the person's design in kit #515, 2026-11-16; kit #521,
+  which asked a per-clone opt-out, closed as decided; for this repository, the person's answer to desk #351,
+  2026-11-17: "reword the register"). Each release is still read here, as it comes, and the
+  watchdog's code with it; the read may come after that code already runs.
 - **The harm that matters: a login leaving the machine.** The kit already holds everything that
   would take: a token in hand, clients that send (Zulip, GitHub through `gh`, the usage endpoint),
   and sessions that follow its instructions. A release could turn any of them into a leak without

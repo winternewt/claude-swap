@@ -56,12 +56,9 @@ State as of 2026-11-15.
 
 ## Open with the person
 
-- **Desk #351 (2026-11-17), the kit's pin held on v0.1.226**: v0.1.227 runs every seat in one machine watchdog at the
-  newest clone pin on the machine, before this gate reads it. The kit says the person decided that is outside a repo's
-  gate (its D205, kit #515; #521 closed as decided), but that reached this seat only through seats, and the auto-mode
-  check refused rewriting docs/TRUST.md on it. #351 asks the person; #349 withdrawn as superseded. On yes: the draft
-  TRUST.md paragraph and audit row (as in commit-less draft of 2026-11-17: "What the pin no longer governs: the seat's
-  watchdog"), commit, then `kittrack.py move vNEWEST --approved 'desk #351'`. Default: stay; new-release lines get `nothing`.
+- Desk #351 (2026-11-17) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
+  pin no longer governs the seat's watchdog, which runs in the machine's one watchdog (the kit's D205); the pin moved
+  past the hold to v0.1.229. #349 was withdrawn as superseded by it.
 - Desk #197 is answered (2026-11-09, comment 6753689868): the five lines accepted, the pin moved to v0.1.153.
 - Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered, and withdrawn as decided elsewhere on 2026-11-14 at the secretary's nightly sweep: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
