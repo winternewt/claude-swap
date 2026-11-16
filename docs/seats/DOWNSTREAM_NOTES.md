@@ -56,7 +56,7 @@ State as of 2026-11-15.
 
 ## Open with the person
 
-- Desk #351 (2026-11-17) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
+- Desk #351 (2026-11-16) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
   pin no longer governs the seat's watchdog, which runs in the machine's one watchdog (the kit's D205); the pin moved
   past the hold to v0.1.229. #349 was withdrawn as superseded by it.
 - Desk #197 is answered (2026-11-09, comment 6753689868): the five lines accepted, the pin moved to v0.1.153.

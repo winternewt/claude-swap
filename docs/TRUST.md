@@ -37,7 +37,7 @@ one itself.
   watchdog's version is not part of this repository's gate, which guards what runs inside this repository's own
   sessions: its hooks, instructions and skills (the kit's D205, the person's design in kit #515, 2026-11-16; kit #521,
   which asked a per-clone opt-out, closed as decided; for this repository, the person's answer to desk #351,
-  2026-11-17: "reword the register"). Each release is still read here, as it comes, and the
+  2026-11-16: "reword the register"). Each release is still read here, as it comes, and the
   watchdog's code with it; the read may come after that code already runs.
 - **The harm that matters: a login leaving the machine.** The kit already holds everything that
   would take: a token in hand, clients that send (Zulip, GitHub through `gh`, the usage endpoint),
