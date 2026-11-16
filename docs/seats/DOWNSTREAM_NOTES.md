@@ -68,3 +68,9 @@ State as of 2026-11-15.
   The plugin agent fault-finder (v0.1.122) runs on this repo only on the person's word. A later release: the
   watcher names it, `kittrack.py move vNEW --approved 'standing grant 2026-10-21'` once the read is judged safe;
   a new hard line is read and accepted by the seat while the kit is private (step 2 above).
+
+## Reflect
+
+- reflect after 2026-11-23: classes/base/BASE.md as of v0.1.224 ("Only a real fork goes to the person", kit #510). Read as its
+  adversary 2026-11-16: no concern; a red flag (adopt flagged code, or stay on the last marker) is a real fork, and
+  what is no red flag this seat already adopts on the read.
