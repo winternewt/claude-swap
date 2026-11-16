@@ -56,6 +56,10 @@ State as of 2026-11-15.
 
 ## Open with the person
 
+- **Desk #349 (2026-11-16), the kit's pin held on v0.1.226**: v0.1.227 runs every seat in one machine watchdog at the
+  newest clone pin on the machine, so this seat's watchdog would run releases before this gate reads them (SECURITY_AUDIT.md
+  row, kit #521 asking an opt-out). Default: stay on v0.1.226, and every later release waits; move once #521 lands or the
+  person picks adopting. The watcher's new-release lines meanwhile get `nothing`.
 - Desk #197 is answered (2026-11-09, comment 6753689868): the five lines accepted, the pin moved to v0.1.153.
 - Desk #110 (filed 2026-10-24 for v0.1.89, moved by comments to v0.1.124) is answered, and withdrawn as decided elsewhere on 2026-11-14 at the secretary's nightly sweep: on 2026-11-04 the
   person accepted the five hard lines that stopped every release ("mark these lines as benign", in chat, put on
