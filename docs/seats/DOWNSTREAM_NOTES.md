@@ -53,6 +53,8 @@ State as of 2026-11-15.
 - The merge keeps the fork's `UPGRADE_COMMANDS` and drops upstream's release-cooldown notice (it points at
   `uv tool upgrade`); expect that conflict again in `update_check.py` and `tests/test_update_check.py`, and in
   `tests/conftest.py` beside the usage-server socket line.
+- README's Installation section installs this fork at `audited` (32b4f78, 2026-11-17, for a second user of the fork);
+  keep the fork's lines when an upstream merge conflicts there, and its `docs/` links relative.
 
 ## Open with the person
 
