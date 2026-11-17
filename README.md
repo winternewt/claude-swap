@@ -7,23 +7,27 @@ Multi-account switcher for Claude Code. Easily switch between multiple Claude ac
 
 ## Installation
 
+This fork installs from its `audited` tag: the last commit [SECURITY_AUDIT.md](SECURITY_AUDIT.md) covered, upstream
+releases merged only after that review. The PyPI package `claude-swap` is upstream's, unreviewed here.
+
 ### Using uv (recommended)
 
 ```bash
-uv tool install claude-swap
+uv tool install 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
 ### Using pipx
 
 ```bash
-pipx install claude-swap
+pipx install git+https://github.com/winternewt/claude-swap.git@audited
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/realiti4/claude-swap.git
+git clone https://github.com/winternewt/claude-swap.git
 cd claude-swap
+git checkout audited
 uv sync
 uv run cswap help
 ```
@@ -141,7 +145,7 @@ Defaults like the threshold and cooldown are configurable with `cswap config set
 
 </details>
 
-The exact rules (margins, landing, polling cadence, tier handling) are in [docs/auto-switch.md](https://github.com/realiti4/claude-swap/blob/main/docs/auto-switch.md).
+The exact rules (margins, landing, polling cadence, tier handling) are in [docs/auto-switch.md](docs/auto-switch.md).
 
 ### Run multiple accounts at the same time (session mode)
 
@@ -294,7 +298,7 @@ cswap menubar --uninstall-service   # stop it and remove the LaunchAgent
 cswap menubar --foreground          # run attached to this terminal, for debugging
 ```
 
-`cswap upgrade` restarts a running menu bar when the build changed. The wrapper app in `/Applications`, file locations, environment handling and the Login Items switch are in [docs/menubar.md](https://github.com/realiti4/claude-swap/blob/main/docs/menubar.md).
+`cswap upgrade` restarts a running menu bar when the build changed. The wrapper app in `/Applications`, file locations, environment handling and the Login Items switch are in [docs/menubar.md](docs/menubar.md).
 
 </details>
 
@@ -407,7 +411,7 @@ Every payload carries a `schemaVersion` (currently `1`); on a handled error stdo
 
 `cswap auto --json` emits an event *stream* instead — one JSON object per line (`{"schemaVersion":1,"event":"switch","ts":…, …}` with kinds like `poll`, `switch`, `no-switch`, `account-quarantined`, `all-exhausted`, `error`). The contract is additive: new kinds and fields may appear, so scripts should ignore unknown ones.
 
-Every optional field (usage age, last-known usage, fetch errors, pace, login expiry, …) is listed in [docs/json-output.md](https://github.com/realiti4/claude-swap/blob/main/docs/json-output.md).
+Every optional field (usage age, last-known usage, fetch errors, pace, login expiry, …) is listed in [docs/json-output.md](docs/json-output.md).
 
 ### Add an account from a raw token or API key
 
@@ -436,9 +440,9 @@ cswap add-token --email user@example.com     # optional label override
 
 ## Documentation
 
-- [docs/auto-switch.md](https://github.com/realiti4/claude-swap/blob/main/docs/auto-switch.md) — the exact auto-switch rules: hysteresis margins, landing rules, per-account thresholds and tiers, polling cadence. Read it to find out why it did or didn't switch.
-- [docs/json-output.md](https://github.com/realiti4/claude-swap/blob/main/docs/json-output.md) — every field in `--json` output, including the optional ones. Read it before writing a script against `cswap list --json` or `cswap auto --json`.
-- [docs/menubar.md](https://github.com/realiti4/claude-swap/blob/main/docs/menubar.md) — how the macOS menu bar runs under launchd: start at login, the wrapper app in `/Applications`, file locations, upgrades, the Login Items switch. Read it when the icon is missing or the service misbehaves.
+- [docs/auto-switch.md](docs/auto-switch.md) — the exact auto-switch rules: hysteresis margins, landing rules, per-account thresholds and tiers, polling cadence. Read it to find out why it did or didn't switch.
+- [docs/json-output.md](docs/json-output.md) — every field in `--json` output, including the optional ones. Read it before writing a script against `cswap list --json` or `cswap auto --json`.
+- [docs/menubar.md](docs/menubar.md) — how the macOS menu bar runs under launchd: start at login, the wrapper app in `/Applications`, file locations, upgrades, the Login Items switch. Read it when the icon is missing or the service misbehaves.
 
 `cswap --help` and `cswap <command> --help` document every flag.
 
