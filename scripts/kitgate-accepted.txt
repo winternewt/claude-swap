@@ -40,3 +40,13 @@ foreign secret	classes/base/seatkeys.py	keyring, and contacts.json beside it: ea
 foreign secret	classes/base/seatkeys.py	"state": "key missing from the keyring" if key is None else
 foreign secret	classes/base/seatkeys.py	raise Refused(f"{full}'s key is among the contacts but not in the keyring: import it again")
 obfuscation	rules/TRUST.md	code that loads the weights (a pickle runs code as it loads: the published weights come from the vendor's own
+#
+# 2026-11-18, the standing grant of 2026-11-09. Read safe at v0.1.234 (SECURITY_AUDIT.md): `keys forget`, a seat's
+# keyring dropping a retired contact's public key and its pending renewal, and retire-repo's step that runs it.
+foreign secret	scripts/seats.py	"""retire-repo's step contacts (kit #532): each seat's keyring on this machine holding a contact of REPO's seats,
+foreign secret	classes/base/watchdog.py	REPO/SEAT@ORGSITE or fingerprint, its key off the keyring and off a renewal still to reach it, so
+foreign secret	classes/base/seatkeys.py	_gpg(h, "--yes", "--delete-keys", k, check=False)  # one gone from the keyring already is forgotten
+foreign secret	classes/base/seatkeys.py	deleted from the keyring and its name off a renewal still to reach it, so nothing more is sealed or sent to it
+foreign secret	scripts/seats.py	desk records for the next run. Then each seat's keyring on this machine holding a contact of REPO's seats forgets it
+foreign secret	classes/base/seatkeys.py	keyring holding it, for retire-repo's step contacts (kit #532). A contacts file that cannot be read raises."""
+foreign secret	scripts/seats.py	rows = [r for r in seatkeys.naming(f"{repo}/") if r[0] != repo]  # the retired seats' own keyrings go with them
