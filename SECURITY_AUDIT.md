@@ -1041,3 +1041,4 @@ on a new machine, which nothing here runs.
 | 2026-11-19 | v0.1.248 → v0.1.249 (moved) | 1 read | the reading in the row above, approved by the person (standing grant 2026-11-09) | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
 | 2026-11-19 | v0.1.249 → v0.1.250 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
 | 2026-11-19 | v0.1.250 → v0.1.251 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
+| 2026-11-19 | v0.1.251 → v0.1.252 (moved) | 0 clean | nothing on the watched paths | Moved by `scripts/kittrack.py move`, per the standing adoption. Installed copy == tag. |
