@@ -50,3 +50,6 @@ foreign secret	classes/base/seatkeys.py	deleted from the keyring and its name of
 foreign secret	scripts/seats.py	desk records for the next run. Then each seat's keyring on this machine holding a contact of REPO's seats forgets it
 foreign secret	classes/base/seatkeys.py	keyring holding it, for retire-repo's step contacts (kit #532). A contacts file that cannot be read raises."""
 foreign secret	scripts/seats.py	rows = [r for r in seatkeys.naming(f"{repo}/") if r[0] != repo]  # the retired seats' own keyrings go with them
+# 2026-11-19, the standing grant of 2026-11-09. Read safe at v0.1.248 (SECURITY_AUDIT.md): the levers skill's row for
+# the desk's pasted bootstrap line, now pointing at /seats:seat, which runs the take itself where its punch-in refused (#547).
+pipe to shell	skills/levers/SKILL.md	| "the seat-builder says my ticket waits", "set up the X seat here", the long `gh api ... \| sh -s X` line relayed | `/seats:seat SEAT` | where the clone does not declare it and its ticket waits, the desk's bootstrap fetched at its commit and run in this clone (the kit pinned, the ticket joined, the pull request opened, an overlay where the desk marks one), then the seat punched in; a repository with no seats sent to `/seats:onboard` (#382, #396, #547) |
