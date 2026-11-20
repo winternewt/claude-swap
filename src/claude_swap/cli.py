@@ -1508,7 +1508,10 @@ def _codex_command(argv: list[str]) -> None:
         if args.action == "watch":
             from claude_swap.tui.codex_watch import CodexWatchApp
 
-            CodexWatchApp(switcher).run()
+            from claude_swap.usage_server import serving
+
+            with serving(codex_switcher=switcher):
+                CodexWatchApp(switcher).run()
         elif args.action in ("disable", "enable"):
             switcher.set_account_disabled(args.account, args.action == "disable")
         elif args.action == "list":
@@ -1560,7 +1563,10 @@ def _codex_command(argv: list[str]) -> None:
                     )
                 )
             signal.signal(signal.SIGTERM, lambda *_: engine.stop())
-            sys.exit(engine.run_loop())
+            from claude_swap.usage_server import serving
+
+            with serving(codex_switcher=switcher):
+                sys.exit(engine.run_loop())
         else:
             if args.account:
                 result = switcher.switch_to(args.account, json_output=args.json)

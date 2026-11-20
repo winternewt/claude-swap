@@ -34,6 +34,12 @@ The Codex provider comes from the MIT-licensed `errhythm/ccswap` code at `e7f251
 
 Claude account export and import cover the Claude roster. To back up offline Codex accounts, stop the watchers, close Codex sessions and protect a copy of the entire `<backup>/codex/` directory as credentials. A global `cswap purge` deletes that directory, including its private session history.
 
+## Local quota API
+
+Read one JSON line from the [local usage socket](../README.md#serve-usage-to-other-local-tools). The top-level `active` field describes Claude. In the same response, `codex.config_dir` identifies the Codex home, `codex.taken_at` timestamps the read, and `codex.active` describes its active managed login. An unmanaged or missing login gives `null`. A managed API-key login has the `api key` sentinel and empty windows.
+
+Codex maps its weekly quota to `seven_day`. Each reported window contains `pct` used and `resets_at` in Unix seconds. The active record also includes `credits`, `credit_allowance` and `reset_credits` when published. Reset and expiry timestamps use Unix seconds throughout the socket response. An account without a saved reading has empty windows and a null `fetched_at`. If a refresh failed, `last_error` can accompany an older reading. A Codex store error is reported under `codex.error`.
+
 ## Usage snapshots on disk
 
 After a Codex quota fetch, cswap saves a sanitized snapshot to `<backup>/codex/usage-N.json`, where `N` is the saved account number. A dashboard that only reads files can read these snapshots without opening credentials or calling an API. See [storage locations](../README.md#data-locations) for `<backup>` on each platform.

@@ -1166,6 +1166,25 @@ class CodexAccountSwitcher:
                     print(f"Account {row['number']}: capture pending")
         return payload
 
+    def active_cached_usage(self, now: float) -> tuple[str, str, UsageEntry] | None:
+        """Read the published quota for the slot matching the live file login."""
+        data = self._read_sequence()
+        if not data["accounts"]:
+            return None
+        try:
+            auth = self._read_live_auth()
+        except (ConfigError, ValidationError):
+            return None
+        number = self._current_account_for_auth(auth, data)
+        if number is None:
+            return None
+        if not number.isascii() or not number.isdecimal():
+            raise ConfigError("Invalid Codex slot number")
+        account = data["accounts"][number]
+        if account.get("authMode") == "api_key":
+            return number, "api_key", UsageEntry(sentinel=USAGE_API_KEY)
+        return number, "oauth", read_usage(self.provider_dir, number, account, now)
+
     def list_payload(self) -> dict[str, Any]:
         """Build the Codex account listing without printing anything.
 
