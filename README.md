@@ -5,6 +5,8 @@
 
 Multi-account switcher for Claude Code. Easily switch between multiple Claude accounts without logging out, or let it switch for you before you hit a rate limit. Track usage for every account in a live dashboard, and run accounts in parallel. Works with both the Claude Code CLI and the VS Code extension.
 
+Manage file-backed Codex logins with `cswap codex add`, watch their quotas with `cswap codex watch`, or switch automatically with `cswap codex auto`. [Codex accounts and session mode](docs/codex.md)
+
 ## Installation
 
 This fork installs from its `audited` tag: the last commit [SECURITY_AUDIT.md](SECURITY_AUDIT.md) covered, upstream
@@ -364,7 +366,7 @@ The input is `cswap list --json` output. Each row with `usageStatus: "ok"` is ma
 
 ### Serve usage to other local tools
 
-Another tool on the machine that wants the active account's usage (a supervisor that pauses lower-priority agents as the 5-hour window fills, a status bar) would otherwise poll the usage endpoint itself and spend the same small per-account budget. While the dashboard (`cswap`, `cswap watch`) or `cswap auto` runs, it answers on a Unix socket instead, from the readings it already holds, never fetching for the caller:
+Another tool on the machine that wants the active account's usage (a supervisor that pauses lower-priority agents as the 5-hour window fills, a status bar) would otherwise poll the usage endpoint itself and spend the same small per-account budget. While a dashboard (`cswap`, `cswap watch`, `cswap codex watch`) or a continuous auto-switch command (`cswap auto`, `cswap codex auto`) runs, it answers on a Unix socket instead, from the readings it already holds, never fetching for the caller:
 
 ```bash
 python3 -c 'import socket; s = socket.socket(socket.AF_UNIX); s.connect("'"$XDG_RUNTIME_DIR"'/claude-usage.sock"); print(s.recv(65536).decode())'
@@ -376,6 +378,8 @@ python3 -c 'import socket; s = socket.socket(socket.AF_UNIX); s.connect("'"$XDG_
 <summary>The answer, the socket's path, turning it off</summary>
 
 One JSON line, then the server closes; nothing is read from the client. `schema` (1), `version`, `config_dir` (whose credential the reading is for: a client should compare it with its own), `taken_at`, and `active`: null, or the active account's `number`, `kind`, `sentinel` (set when there are no numbers, e.g. `token expired`), `fetched_at`, `age_s`, `backoff_until`, `last_error` and `windows` (`five_hour`, `seven_day`, `scoped`, each `pct` and `resets_at` in epoch seconds). The email is not served. The socket is `$XDG_RUNTIME_DIR/claude-usage.sock`, mode 0600; `CSWAP_USAGE_SOCKET=<path>` moves it and `CSWAP_USAGE_SOCKET=` turns it off. When two cswap processes run, the first one serves; one that finds a live server leaves it alone.
+
+The same response includes `codex.config_dir` (the resolved Codex home) and `codex.active` for its current managed file login. Read `codex.active.windows.five_hour` and `codex.active.windows.seven_day` for the latest published percentages and reset times. Check `fetched_at`, `age_s` and `last_error` before acting. Codex usage, watch and auto-switch commands publish these readings. A client connection never polls the provider. [Codex quota fields](docs/codex.md#local-quota-api)
 
 </details>
 

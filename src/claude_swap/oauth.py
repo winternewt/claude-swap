@@ -1201,7 +1201,7 @@ def relevant_windows(
     if usage.get("source") != USAGE_SOURCE_HEADERS or _header_reading_complete(
         usage, models
     ):
-        for key, label in (("five_hour", FIVE_HOUR_LABEL), ("seven_day", "7d")):
+        for key, label in (("five_hour", FIVE_HOUR_LABEL), ("seven_day", "7d"), ("weekly", "Weekly")):
             window = usage.get(key)
             if isinstance(window, dict) and isinstance(window.get("pct"), (int, float)):
                 windows.append((label, float(window["pct"]), window.get("resets_at")))

@@ -21,6 +21,7 @@ import pytest
 
 from claude_swap import macos_keychain as _macos_keychain
 from claude_swap import paths as _paths
+from claude_swap.codex import get_codex_home
 
 
 class RealStoreWriteBlocked(BaseException):
@@ -126,6 +127,7 @@ def _freeze_real_store_specs() -> tuple[tuple[Path, bool], ...]:
 
     def _resolve() -> tuple[tuple[Path, bool], ...]:
         return (
+            (get_codex_home(), False),
             (_paths.get_backup_root(), True),
             (_paths.get_legacy_backup_root(), True),
             (_paths.get_claude_config_home(), False),
@@ -173,7 +175,7 @@ def _freeze_real_store_specs() -> tuple[tuple[Path, bool], ...]:
                     os.environ[k] = v
 
     default_specs = _resolve_with_cleared(
-        "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME"
+        "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME"
     )
     # C-0: a THIRD snapshot, additive to (not replacing) default_specs above.
     # The mandated review/CI isolation recipe sets HOME/USERPROFILE (and
@@ -192,7 +194,7 @@ def _freeze_real_store_specs() -> tuple[tuple[Path, bool], ...]:
     # collapses that distinct combination and silently drops the roots it
     # used to protect.
     home_default_specs = _resolve_with_cleared(
-        "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME",
+        "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME",
         "HOME", "USERPROFILE",
     )
 
@@ -488,6 +490,7 @@ def _isolate_real_home(request, tmp_path_factory, monkeypatch):
     backup paths — and on macOS that leads back to the real Keychain. Tests that
     exercise those vars set them explicitly, overriding this.
     """
+    monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     monkeypatch.delenv("CLAUDE_SECURESTORAGE_CONFIG_DIR", raising=False)
     monkeypatch.delenv("XDG_DATA_HOME", raising=False)

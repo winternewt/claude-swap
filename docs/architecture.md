@@ -21,6 +21,7 @@ It works on the same files and Keychain items Claude Code uses, and takes Claude
 **Core.**
 
 - `switcher.py`: `ClaudeAccountSwitcher`. Slots, add, remove, switch, swap, move, usage collection and the token refresh gate. See the map below.
+- `codex.py` owns file-backed Codex accounts. `codex_usage.py` collects quota and `codex_usage_store.py` publishes sanitized per-slot readings. `codex_autoswitch.py` selects accounts using those readings. `codex_session.py` tracks which process owns a session credential and reconciles it with the saved slot. [Codex session mode](codex.md#session-mode-codex-run)
 - `autoswitch.py`: `AutoSwitchEngine`. Decides when to switch and reports through typed events; it never prints. `lines.py` holds the per-window switch lines.
 - `session.py`: `SessionManager`, behind `cswap run`. `mappings.py` maps a directory to an account.
 - `usage_store.py`: `UsageStore`, the per-account usage table. `poll_policy.py` holds every polling number. `snapshot_source.py` is the read path for dashboards.

@@ -164,3 +164,106 @@ def test_serving_disabled_yields_none(monkeypatch):
     monkeypatch.setenv("CSWAP_USAGE_SOCKET", "")
     with usage_server.serving(SimpleNamespace()) as srv:
         assert srv is None
+
+
+def test_codex_published_quota_over_the_shared_socket(sock_dir, tmp_path, monkeypatch):
+    from claude_swap import codex
+    from tests.test_codex import _auth, _write_live
+    from tests.test_codex_usage_store import _usage
+
+    home = tmp_path / "codex-home"
+    home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", str(home))
+    publisher = codex.CodexAccountSwitcher()
+    auth = _auth("private@example.test", "private-account-id")
+    _write_live(home, auth)
+    publisher.add_account(assume_yes=True)
+    monkeypatch.setattr(codex, "fetch_codex_usage", lambda *a, **kw: _usage())
+    publisher.accounts_snapshot()
+    monkeypatch.setattr(codex, "fetch_codex_usage", lambda *a, **kw: pytest.fail("socket fetched"))
+    path = sock_dir / "u.sock"
+    srv = server(path, snapshot(account("2", True, last_good=GOOD)))
+    assert srv.start()
+    try:
+        result = ask(path)
+    finally:
+        srv.stop()
+    assert result["active"]["number"] == "2"
+    section = result["codex"]
+    assert section["config_dir"] == str(home.resolve())
+    active = section["active"]
+    assert active["number"] == "1"
+    assert active["windows"]["five_hour"] == {"pct": 12.5, "resets_at": 1800018000}
+    assert active["windows"]["seven_day"] == {"pct": 42, "resets_at": 1800604800}
+    assert active["credits"]["balance"] == 123.5
+    assert active["credit_allowance"]["remaining"] == 450
+    assert active["reset_credits"] == {"available": 2, "expires_at": 1800403200}
+    assert active["age_s"] >= 0 and active["fetched_at"] <= section["taken_at"]
+    for secret in (*auth["tokens"].values(), "private@example.test", "usageGeneration"):
+        assert secret not in json.dumps(result)
+
+
+def test_codex_socket_uses_live_login_and_slot_generation(tmp_path, monkeypatch):
+    from claude_swap import codex
+    from tests.test_codex import _auth, _write_live
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    switcher = codex.CodexAccountSwitcher()
+    auth = _auth("saved@example.test", "saved-account")
+    _write_live(tmp_path, auth)
+    switcher.add_account(assume_yes=True)
+    (switcher.provider_dir / "usage-1.json").write_text(json.dumps({
+        "schemaVersion": 1, "number": 1, "slotGeneration": "retired",
+        "fetchedAt": 100, "windows": {"weekly": {"usedPercent": 97}},
+    }))
+    active = usage_server._codex_payload(switcher, 120)["active"]
+    assert active["windows"] == {} and active["fetched_at"] is None
+    _write_live(tmp_path, _auth("external@example.test", "external-account"))
+    assert usage_server._codex_payload(switcher, 120)["active"] is None
+    _write_live(tmp_path, {"auth_mode": "api_key", "OPENAI_API_KEY": "fixture-secret"})
+    switcher.add_account(assume_yes=True)
+    active = usage_server._codex_payload(switcher, 120)["active"]
+    assert (active["kind"], active["sentinel"], active["windows"]) == ("api_key", "api key", {})
+
+
+def test_codex_failure_leaves_claude_available(sock_dir, monkeypatch):
+    srv = server(sock_dir / "unused", snapshot(account("2", True, last_good=GOOD)))
+    def broken(now):
+        raise ValueError("sensitive fixture detail")
+    monkeypatch.setattr(srv._codex, "active_cached_usage", broken)
+    response = json.loads(srv.answer())
+    assert response["active"]["number"] == "2"
+    assert response["codex"]["error"] and "sensitive" not in str(response)
+
+
+@pytest.mark.parametrize("command", ["watch", "auto"])
+def test_codex_commands_host_quota_without_migrating_claude(command, sock_dir, monkeypatch):
+    from claude_swap import cli, migrations, switcher
+    from claude_swap.codex_autoswitch import CodexAutoSwitchEngine
+    from claude_swap.tui.codex_watch import CodexWatchApp
+
+    def unexpected_migration(*args):
+        pytest.fail("a Codex socket host attempted to migrate Claude storage")
+
+    monkeypatch.setattr(switcher, "migrate_legacy_backup_dir", unexpected_migration)
+    monkeypatch.setattr(migrations, "run_migrations", unexpected_migration)
+    path = sock_dir / "q.sock"
+    monkeypatch.setenv("CSWAP_USAGE_SOCKET", str(path))
+    replies = []
+
+    def read_while_running(self):
+        replies.append(ask(path))
+        return 0
+
+    if command == "watch":
+        monkeypatch.setattr(CodexWatchApp, "run", read_while_running)
+        cli._codex_command(["watch"])
+    else:
+        monkeypatch.setattr(CodexAutoSwitchEngine, "run_loop", read_while_running)
+        monkeypatch.setattr("signal.signal", lambda *args: None)
+        with pytest.raises(SystemExit) as ex:
+            cli._codex_command(["auto", "--dry-run", "--json"])
+        assert ex.value.code == 0
+    assert len(replies) == 1
+    assert replies[0]["active"] is None and replies[0]["codex"]["active"] is None
+    assert not path.exists()
