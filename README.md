@@ -5,6 +5,8 @@
 
 Multi-account switcher for Claude Code. Easily switch between multiple Claude accounts without logging out, or let it switch for you before you hit a rate limit. Track usage for every account in a live dashboard, and run accounts in parallel. Works with both the Claude Code CLI and the VS Code extension.
 
+Manage file-backed Codex logins with `cswap codex add`, watch their quotas with `cswap codex watch`, or switch automatically with `cswap codex auto`. [Codex accounts and session mode](docs/codex.md)
+
 ## Installation
 
 ### Using uv (recommended)

@@ -8282,6 +8282,9 @@ class ClaudeAccountSwitcher:
             print("  - All stored account credentials (macOS Keychain and/or files)")
         else:
             print("  - All stored account credential files")
+        if (self.backup_dir / "codex").is_dir() or (legacy_distinct and (legacy / "codex").is_dir()):
+            warning("  - Saved Codex credentials, quota snapshots and private session history")
+            print("    Close Codex sessions and stop quota watchers before purging.")
         if session_dirs:
             print("  - All session profiles and their Keychain entries")
         # The quarantine tree sits inside the backup dir, so rmtree below takes

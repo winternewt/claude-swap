@@ -178,6 +178,10 @@ def cli_should_probe(argv: list[str], *, colors_enabled: bool) -> bool:
     """
     if not colors_enabled:
         return False
+    if argv[:1] == ["codex"] and next(
+        (arg for arg in argv[1:] if not arg.startswith("-")), None
+    ) == "run":
+        return False
     if argv and argv[0] == "run":
         return False
     if "--json" in argv:

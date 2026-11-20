@@ -932,6 +932,7 @@ def test_build_plist_forwards_the_profile_of_the_installing_shell(tmp_path):
         "CLAUDE_CONFIG_DIR": "/Users/x/.claude-work",
         "CLAUDE_SECURESTORAGE_CONFIG_DIR": "/Users/x/.claude-work",
         "XDG_DATA_HOME": "/Users/x/.local/share",
+        "CODEX_HOME": str(tmp_path / "codex-work"),
         "UNRELATED": "no",
     }
     parsed = plistlib.loads(launch_agent.build_plist(PROGRAM, home=tmp_path, env=env))
@@ -939,7 +940,14 @@ def test_build_plist_forwards_the_profile_of_the_installing_shell(tmp_path):
     assert forwarded["CLAUDE_CONFIG_DIR"] == "/Users/x/.claude-work"
     assert forwarded["CLAUDE_SECURESTORAGE_CONFIG_DIR"] == "/Users/x/.claude-work"
     assert forwarded["XDG_DATA_HOME"] == "/Users/x/.local/share"
+    assert forwarded["CODEX_HOME"] == str((tmp_path / "codex-work").resolve())
     assert "UNRELATED" not in forwarded
+
+
+def test_build_plist_omits_isolated_codex_home(tmp_path):
+    isolated = tmp_path / "codex" / "sessions" / "1-example"
+    definition = launch_agent.build_plist(PROGRAM, home=tmp_path, env={"CODEX_HOME": str(isolated)})
+    assert "CODEX_HOME" not in plistlib.loads(definition)["EnvironmentVariables"]
 
 
 def test_install_reports_a_profile_that_moved(tmp_path, monkeypatch):

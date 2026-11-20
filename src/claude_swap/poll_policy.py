@@ -166,10 +166,34 @@ SCOPED_PROBE_RETRY_S = 3600.0
 SCOPED_PROBE_MAX_PAUSE_S = 7 * 86400.0
 
 
-def binding_pct(usage: dict | None, models: tuple[str, ...] = ()) -> float | None:
-    """Utilization of the binding (worst) relevant window, or None."""
-    headroom = oauth.account_headroom(usage, models)
-    return None if headroom is None else 100.0 - headroom
+def binding_pct(
+    usage: dict | None,
+    models: tuple[str, ...] = (),
+    *,
+    gate_thresholds: dict[str, float] | None = None,
+    default_threshold: float | None = None,
+) -> float | None:
+    """Utilization of the binding (worst) relevant window, or None.
+
+    With ``gate_thresholds`` (lowercased label → that gate's threshold) the
+    binding window is the one closest to its own wall, and the returned pct
+    is shifted onto the shared-threshold scale: it crosses ``default_threshold``
+    exactly when that gate trips. Without gates this is ``max(pct)``, same as
+    ``100 - account_headroom``.
+    """
+    if not gate_thresholds or default_threshold is None:
+        headroom = oauth.account_headroom(usage, models)
+        return None if headroom is None else 100.0 - headroom
+    windows = oauth.relevant_windows(usage, models)
+    if not windows:
+        return None
+
+    def margin(window: tuple[str, float, str | None]) -> float:
+        return gate_thresholds.get(window[0].lower(), default_threshold) - window[1]
+
+    label, pct, _resets_at = min(windows, key=lambda w: (margin(w), -w[1]))
+    gate = gate_thresholds.get(label.lower(), default_threshold)
+    return pct + (default_threshold - gate)
 
 
 def limiting_reset_ts(

@@ -975,3 +975,41 @@ def test_format_title_attention_prefix():
     assert menubar.format_title(None, None, settings, attention=True) == "⚠ ⇄"
     assert menubar.format_title("loc@papaya.asia", _USAGE, settings, attention=True).startswith("⚠ ⇄ ")
     assert not menubar.format_title("loc@papaya.asia", _USAGE, settings).startswith("⚠")
+
+
+def test_usage_summary_codex_weekly_and_banked_resets():
+    usage = {
+        "weekly": {"pct": 42.0},
+        "reset_credits": {
+            "available": 3,
+            "expires_at": _iso(2 * 86400),
+        },
+    }
+    assert menubar.usage_summary(usage, _NOW) == (
+        "Weekly 42% · Resets 3 (expires 2d 0h)"
+    )
+
+
+def test_usage_summary_codex_credit_allowance():
+    usage = {
+        "weekly": {"pct": 42.0},
+        "credits": {"has_credits": True, "balance": 2500.0},
+        "credit_allowance": {
+            "remaining": 4678.44787979126,
+            "limit": 5000.0,
+        },
+    }
+    assert menubar.usage_summary(usage) == (
+        "Weekly 42% · Credits 2,500.00 · Allowance 4,678.45 left"
+    )
+
+
+def test_usage_summary_no_credits_wins_over_zero_balance():
+    usage = {"credits": {"has_credits": False, "balance": 0.0}}
+    assert menubar.usage_summary(usage) == "Credits none"
+    assert menubar.usage_summary(
+        {"credits": {"has_credits": False, "limit_reached": True}}
+    ) == "Credits limit reached"
+    assert menubar.usage_summary(
+        {"credits": {"has_credits": False, "unlimited": True}}
+    ) == "Credits unlimited"

@@ -123,6 +123,45 @@ def usage_to_json(usage: dict, fetched_at: float | None = None) -> dict:
         out["fiveHour"] = _window_to_json(usage["five_hour"])
     if "seven_day" in usage:
         out["sevenDay"] = _weekly_window_to_json(usage["seven_day"], fetched_at)
+    if "weekly" in usage:
+        # Codex's canonical weekly window is the same 7-day cadence as
+        # Claude's seven_day, so it earns the same pace fields.
+        out["weekly"] = _weekly_window_to_json(usage["weekly"], fetched_at)
+    if "reset_credits" in usage:
+        resets = usage["reset_credits"]
+        resets_out = {"available": resets["available"]}
+        if "expires_at" in resets:
+            resets_out["earliestExpiresAt"] = resets["expires_at"]
+        out["resetCredits"] = resets_out
+    if "credits" in usage:
+        credits = usage["credits"]
+        credits_out: dict = {}
+        for source_key, target_key in (
+            ("has_credits", "hasCredits"),
+            ("unlimited", "unlimited"),
+            ("limit_reached", "limitReached"),
+            ("balance", "balance"),
+            ("approx_local_messages", "approxLocalMessages"),
+            ("approx_cloud_messages", "approxCloudMessages"),
+        ):
+            if source_key in credits:
+                credits_out[target_key] = credits[source_key]
+        out["credits"] = credits_out
+    if "credit_allowance" in usage:
+        allowance = usage["credit_allowance"]
+        allowance_out: dict = {}
+        for source_key, target_key in (
+            ("limit_reached", "limitReached"),
+            ("used", "used"),
+            ("limit", "limit"),
+            ("remaining", "remaining"),
+            ("pct", "pct"),
+        ):
+            if source_key in allowance:
+                allowance_out[target_key] = allowance[source_key]
+        if "resets_at" in allowance:
+            allowance_out["resetsAt"] = allowance["resets_at"]
+        out["creditAllowance"] = allowance_out
     if "spend" in usage:
         spend = usage["spend"]
         spend_out: dict = {
@@ -435,6 +474,33 @@ def account_row(
     # (see ``subscription``); a slot never fetched emits no key at all.
     if subscription_plan:
         row["plan"] = subscription_plan_fields(subscription_plan)
+    if usage is not None:
+        row.update(usage_freshness_fields(usage_fetched_at, usage_age_s))
+    else:
+        row.update(
+            last_good_usage_fields(
+                last_good_usage, usage_fetched_at, usage_age_s
+            )
+        )
+        row.update(usage_failure_fields(status, last_error, backoff_until))
+    return row
+
+
+def usage_row_fields(
+    usage_entry: dict | str | None,
+    *,
+    usage_fetched_at: float | None = None,
+    usage_age_s: float | None = None,
+    last_good_usage: dict | None = None,
+    last_error: str | None = None,
+    backoff_until: float | None = None,
+) -> dict:
+    """The usage part of a ``list --json`` row, shared by every provider:
+    ``usageStatus``/``usage`` plus the freshness, last-good and failure
+    fields. ``usage_entry`` is the decision-grade value
+    (``UsageEntry.decision_value()``)."""
+    status, usage = usage_fields(usage_entry, usage_fetched_at)
+    row: dict = {"usageStatus": status, "usage": usage}
     if usage is not None:
         row.update(usage_freshness_fields(usage_fetched_at, usage_age_s))
     else:

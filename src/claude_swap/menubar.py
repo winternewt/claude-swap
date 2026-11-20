@@ -107,6 +107,7 @@ class MenuBarSettings:
     title_scoped: bool = False  # append per-model weekly limits (e.g. Fable) to the title
     refresh_interval: int = 60
     auto_switch_enabled: bool = False
+    codex_auto_switch_enabled: bool = False
 
     @classmethod
     def load(cls, path: Path) -> "MenuBarSettings":
@@ -379,7 +380,7 @@ def usage_summary(
         if countdown:
             seg += f" ({countdown})"
         parts.append(seg)
-    for key, label in (("five_hour", "5h"), ("seven_day", "7d")):
+    for key, label in (("five_hour", "5h"), ("seven_day", "7d"), ("weekly", "Weekly")):
         window = usage.get(key)
         pace_result = None
         if key == "seven_day":
@@ -397,6 +398,44 @@ def usage_summary(
             countdown = _live_countdown(window, now)
             if countdown:
                 seg += f" ({countdown})"  # time until this window resets
+            parts.append(seg)
+    reset_credits = usage.get("reset_credits")
+    if isinstance(reset_credits, dict) and isinstance(
+        reset_credits.get("available"), int
+    ):
+        seg = f"Resets {reset_credits['available']}"
+        expiry = {"resets_at": reset_credits.get("expires_at")}
+        countdown = _live_countdown(expiry, now)
+        if countdown:
+            seg += f" (expires {countdown})"
+        parts.append(seg)
+    credits = usage.get("credits")
+    if isinstance(credits, dict):
+        if credits.get("limit_reached") is True:
+            seg = "Credits limit reached"
+        elif credits.get("unlimited") is True:
+            seg = "Credits unlimited"
+        elif credits.get("has_credits") is False:
+            seg = "Credits none"
+        elif isinstance(credits.get("balance"), (int, float)):
+            seg = f"Credits {credits['balance']:,.2f}"
+        elif credits.get("has_credits") is True:
+            seg = "Credits available"
+        else:
+            seg = ""
+        if seg:
+            parts.append(seg)
+    allowance = usage.get("credit_allowance")
+    if isinstance(allowance, dict):
+        if allowance.get("limit_reached") is True:
+            seg = "Allowance limit reached"
+        elif isinstance(allowance.get("remaining"), (int, float)):
+            seg = f"Allowance {allowance['remaining']:,.2f} left"
+        elif isinstance(allowance.get("limit"), (int, float)):
+            seg = f"Allowance {allowance['limit']:,.2f} limit"
+        else:
+            seg = ""
+        if seg:
             parts.append(seg)
     # Per-model weekly limits (e.g. Fable), from the usage API's ``limits`` array.
     for window in usage.get("scoped") or []:
@@ -771,6 +810,8 @@ def run(switcher) -> int:
 
     from claude_swap.autoswitch import AutoSwitchEngine
     from claude_swap.settings import load_settings, set_setting
+    from claude_swap.codex import CodexAccountSwitcher, _codex_restart_hint
+    from claude_swap.codex_autoswitch import CodexAutoSwitchEngine
     from claude_swap.snapshot_source import SnapshotSource
 
     settings_path = switcher.backup_dir / "menubar_settings.json"
@@ -802,6 +843,28 @@ def run(switcher) -> int:
             self._engine_failure: str | None = None
             self._engine_events: list = []
             self._event_lock = threading.Lock()
+            # Codex mirror of the above. Construction and snapshotting must
+            # degrade to an empty Codex section rather than crash the menu bar
+            # (e.g. no file-backed auth store configured), so failures here
+            # just leave codex_switcher None and the Codex submenu empty.
+            try:
+                self.codex_switcher = CodexAccountSwitcher()
+            except Exception as e:
+                self.switcher._logger.warning("codex switcher unavailable: %s", e)
+                self.codex_switcher = None
+            self._codex_snapshot_source = (
+                SnapshotSource(self.codex_switcher) if self.codex_switcher else None
+            )
+            self.codex_snapshot = dict(EMPTY_SNAPSHOT)
+            # Seed from the current auth.json: left at 0.0 the first sync tick
+            # after the constructor's refresh_async() would read as a change and
+            # fire a second full two-provider fetch seconds into launch.
+            try:
+                self._codex_auth_mtime = self.codex_switcher.auth_file.stat().st_mtime
+            except (OSError, AttributeError):
+                self._codex_auth_mtime = 0.0
+            self._codex_engine = None
+            self._codex_engine_events: list = []
             self._engine_errors_surfaced: dict[str, float] = {}
             self._health_item = None
             self._health_attention = False
@@ -813,6 +876,8 @@ def run(switcher) -> int:
             self.sync_timer = rumps.Timer(self.on_sync_tick, 1)
             self.sync_timer.start()
             self.refresh_async()  # first display fetch
+            if self.settings.codex_auto_switch_enabled:
+                self._start_codex_engine()
             if self.settings.auto_switch_enabled:
                 self._start_engine()
 
@@ -840,13 +905,22 @@ def run(switcher) -> int:
                 except Exception:
                     # Keep the last good snapshot rather than blanking the menu.
                     self.switcher._logger.debug("menubar snapshot failed", exc_info=True)
-                    return
-                self._log_usage(snap)
-                self.snapshot = snap
-                self._snapshot_at = time.time()
-                self._dirty = True  # picked up by on_sync_tick on the main thread
-                if store_only:
-                    self._snapshot_source.refresh_plans()
+                else:
+                    self._log_usage(snap)
+                    self.snapshot = snap
+                    self._snapshot_at = time.time()
+                    self._dirty = True
+                    if store_only:
+                        self._snapshot_source.refresh_plans()
+                if self._codex_snapshot_source is not None:
+                    try:
+                        snapshot = self._codex_snapshot_source.take(
+                            full=full, store_only=self._codex_engine is not None and not full
+                        )
+                        self.codex_snapshot = _adapt_snapshot(snapshot)
+                        self._dirty = True
+                    except Exception:
+                        self.switcher._logger.debug("Codex quota refresh failed", exc_info=True)
             finally:
                 self._refreshing = False
 
@@ -877,6 +951,8 @@ def run(switcher) -> int:
                 self._dirty = False
                 self.rebuild_menu()
             self._detect_active_change()
+            self._detect_codex_active_change()
+            self._drain_codex_engine_events()
             self._drain_engine_events()
             self._refresh_health_row()
 
@@ -1025,6 +1101,203 @@ def run(switcher) -> int:
                         self.rebuild_menu()
                         self.refresh_async()  # display fetching resumes on its own
 
+        def _detect_codex_active_change(self):
+            # Codex mirror of _detect_active_change, and it needs the same
+            # identity guard for a sharper reason: refresh_async() snapshots
+            # *both* providers, so refreshing on every auth.json write would
+            # make each unrelated Codex token refresh drag a Claude usage API
+            # fetch along with it. current_account_number() is the Codex
+            # _get_current_account(): auth.json + sequence.json reads and an
+            # in-memory match, no network or Keychain, so it is cheap enough to
+            # run whenever the mtime moves.
+            if self.codex_switcher is None or self._refreshing:
+                return
+            try:
+                mtime = self.codex_switcher.auth_file.stat().st_mtime
+            except OSError:
+                return
+            if mtime == self._codex_auth_mtime:
+                return
+            self._codex_auth_mtime = mtime
+            try:
+                current = self.codex_switcher.current_account_number()
+            except Exception:
+                return  # unreadable auth store; keep the last good snapshot
+            active = next(
+                (
+                    num
+                    for num, _email, is_active, *_rest in self.codex_snapshot["accounts"]
+                    if is_active
+                ),
+                None,
+            )
+            # Unlike the Claude guard this also fires on current=None (a codex
+            # logout), which is a real change the menu should reflect.
+            if current != active:
+                self.refresh_async()
+
+        def _start_codex_engine(self):
+            """Run CodexAutoSwitchEngine (live) in a background thread."""
+            if self._codex_engine is not None or self.codex_switcher is None:
+                return
+            try:
+                engine = CodexAutoSwitchEngine(
+                    self.codex_switcher,
+                    load_settings(self.codex_switcher.backup_dir),
+                    self._on_codex_engine_event,
+                    dry_run=False,
+                )
+            except Exception as e:  # never let a bad start crash the menu bar
+                self.switcher._logger.warning("codex auto-switch engine failed to start: %s", e)
+                rumps.notification("cswap", "Codex auto-switch failed to start", str(e))
+                return
+            self._codex_engine = engine
+            threading.Thread(target=self._run_codex_engine, args=(engine,), daemon=True).start()
+
+        def _run_codex_engine(self, engine):
+            try:
+                engine.run_loop()
+            except Exception:
+                self.switcher._logger.debug("codex auto-switch engine crashed", exc_info=True)
+
+        def _stop_codex_engine(self):
+            if self._codex_engine is not None:
+                self._codex_engine.stop()
+                self._codex_engine = None
+
+        def _restart_codex_engine(self):
+            """Apply changed core settings by restarting the running engine."""
+            if self._codex_engine is not None:
+                self._stop_codex_engine()
+                self._start_codex_engine()
+
+        def _on_codex_engine_event(self, event):
+            with self._event_lock:
+                self._codex_engine_events.append(event)
+
+        def _drain_codex_engine_events(self):
+            with self._event_lock:
+                events, self._codex_engine_events = self._codex_engine_events, []
+            for ev in events:
+                if ev.kind == "switch" and not getattr(ev, "dry_run", False):
+                    rumps.notification("cswap", "Codex auto-switched account", ev.human())
+                    self.refresh_async()
+                elif ev.kind == "all-exhausted":
+                    rumps.notification("cswap", "All Codex accounts exhausted", ev.human())
+
+        def _codex_menu(self, rumps):
+            menu = rumps.MenuItem("Codex")
+            if self.codex_switcher is None:
+                menu.add(rumps.MenuItem("Codex unavailable", callback=None))
+                return menu
+            account_items = []
+            for num, email, is_active, display, _last_good, alias, disabled, fetched_at, *_rest in self.codex_snapshot["accounts"]:
+                item = rumps.MenuItem(
+                    format_account_label(
+                        num, email, display, alias=alias, disabled=disabled, fetched_at=fetched_at
+                    ),
+                    callback=self._make_codex_switch_to(num),
+                )
+                item.state = 1 if is_active else 0
+                account_items.append(item)
+            if not account_items:
+                account_items.append(rumps.MenuItem("No managed Codex accounts", callback=None))
+            for item in (
+                *account_items,
+                None,
+                rumps.MenuItem("Rotate to next", callback=self._codex_rotate()),
+                None,
+                self._codex_add_menu(rumps),
+                self._codex_disable_menu(rumps),
+                self._codex_remove_menu(rumps),
+            ):
+                menu.add(item)
+            return menu
+
+        def _codex_add_menu(self, rumps):
+            menu = rumps.MenuItem("Add account")
+            menu.add(rumps.MenuItem("From current login", callback=self.on_codex_add_login))
+            return menu
+
+        def _codex_remove_menu(self, rumps):
+            menu = rumps.MenuItem("Remove account")
+            accounts = self.codex_snapshot["accounts"]
+            if not accounts:
+                menu.add(rumps.MenuItem("No managed accounts", callback=None))
+            for num, email, _is_active, _display, _last_good, _alias, _disabled, _fetched_at, *_rest in accounts:
+                menu.add(
+                    rumps.MenuItem(f"{num}  {email}", callback=self._make_codex_remove(num))
+                )
+            return menu
+
+        def _codex_disable_menu(self, rumps):
+            menu = rumps.MenuItem("Disable / enable account")
+            accounts = self.codex_snapshot["accounts"]
+            if not accounts:
+                menu.add(rumps.MenuItem("No managed accounts", callback=None))
+            for num, email, _is_active, _display, _last_good, _alias, disabled, _fetched_at, *_rest in accounts:
+                item = rumps.MenuItem(
+                    f"{num}  {email}", callback=self._make_codex_toggle_disabled(num, disabled)
+                )
+                item.state = 1 if disabled else 0
+                menu.add(item)
+            return menu
+
+        def _notify_codex_switched(self):
+            # Codex holds its login in memory and never re-reads auth.json, so
+            # the restart hint (and whether it applies at all) differs from
+            # Claude Code's -- reuse the same phrasing `cswap codex switch`
+            # prints rather than repeating the Claude-specific wording above.
+            rumps.notification("cswap", "Codex account switched", _codex_restart_hint())
+
+        def _make_codex_switch_to(self, num):
+            def cb(_sender):
+                if self._guard(lambda: self.codex_switcher.switch_to(str(num))):
+                    self._notify_codex_switched()
+                    self.refresh_async()
+            return cb
+
+        def _codex_rotate(self):
+            def cb(_sender):
+                if self._guard(lambda: self.codex_switcher.switch(strategy=None)):
+                    self._notify_codex_switched()
+                    self.refresh_async()
+            return cb
+
+        def _make_codex_remove(self, num):
+            def cb(_sender):
+                if rumps.alert(
+                    title="Remove account",
+                    message=f"Remove Codex account {num}?",
+                    ok="Remove",
+                    cancel="Cancel",
+                ) == 1:  # 1 == OK
+                    if self._guard(lambda: self.codex_switcher.remove_account(str(num), assume_yes=True)):
+                        self.refresh_async()
+            return cb
+
+        def _make_codex_toggle_disabled(self, num, disabled):
+            target = not disabled
+            def cb(_sender):
+                if self._guard(
+                    lambda: self.codex_switcher.set_account_disabled(str(num), target)
+                ):
+                    self.refresh_async()
+            return cb
+
+        def on_codex_add_login(self, _sender):
+            if self._guard(self.codex_switcher.add_account):
+                self.refresh_async()
+
+        def on_toggle_codex_autoswitch(self, _sender):
+            self.settings.codex_auto_switch_enabled = not self.settings.codex_auto_switch_enabled
+            self.settings.save(settings_path)
+            if self.settings.codex_auto_switch_enabled:
+                self._start_codex_engine()
+            else:
+                self._stop_codex_engine()
+            self.rebuild_menu()
+
         def _threshold(self) -> int:
             """Current auto-switch threshold from core settings (for the menu)."""
             try:
@@ -1105,6 +1378,7 @@ def run(switcher) -> int:
                 rumps.MenuItem("Refresh current credentials", callback=self.on_refresh_creds),
                 self._history_menu(rumps),
                 None,
+                self._codex_menu(rumps),
                 self._settings_menu(rumps),
                 rumps.MenuItem("Refresh now", callback=self.on_refresh_now),
                 rumps.MenuItem("Quit", callback=self.on_quit),
@@ -1197,6 +1471,15 @@ def run(switcher) -> int:
             auto_item = rumps.MenuItem("Auto-switch accounts", callback=self.on_toggle_autoswitch)
             auto_item.state = 1 if self.settings.auto_switch_enabled else 0
             menu.add(auto_item)
+
+            codex_auto_item = rumps.MenuItem(
+                "Auto-switch Codex accounts",
+                callback=self.on_toggle_codex_autoswitch if self.codex_switcher else None,
+            )
+            codex_auto_item.state = (
+                1 if self.codex_switcher and self.settings.codex_auto_switch_enabled else 0
+            )
+            menu.add(codex_auto_item)
 
             threshold_menu = rumps.MenuItem("Auto-switch threshold")
             current = self._threshold()
@@ -1340,6 +1623,7 @@ def run(switcher) -> int:
 
         def on_quit(self, _sender):
             self._stop_engine()
+            self._stop_codex_engine()
             rumps.quit_application()
 
         def on_toggle_name(self, _sender):
@@ -1405,6 +1689,7 @@ def run(switcher) -> int:
                 except Exception as e:
                     rumps.alert(title="claude-swap", message=f"Couldn't set threshold: {e}")
                     return
+                self._restart_codex_engine()
                 self._restart_engine()  # apply immediately if running
                 self.rebuild_menu()
             return cb
