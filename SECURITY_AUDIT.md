@@ -751,19 +751,29 @@ through `tui.data.run_action` (stdout captured, stdin empty). The dashboard's
 Add menu opens that screen on the add confirmation. TUI only: no new call,
 host, file or process. Tests: 5826 passed, 18 skipped.
 
+**Follow-up `71282f6`** (this seat, on the person's word, 2026-11-21: Codex
+quotas on the watch pane as Claude's, under their own header). The watch
+screen adds a Codex section of the same cards, read every interval in a
+thread worker through `CodexAccountSwitcher(initialize_storage=False)
+.accounts_snapshot()`, the call `cswap codex watch` already makes (its usage
+fetch goes to the approved `chatgpt.com` host); `usage_rows` draws Codex's
+`weekly` window as the 7d row. `7474b28` changes a test only: the real-`/proc`
+smoke test is judged by its own child, since parallel workers' children made
+it flaky. Tests: 5828 passed, 18 skipped, six runs in a row.
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==1.1.0'       # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@348c3851b2f562b662c65f79554c6091a1a8a8e8'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@7474b28d81c4d17e974a0b7e5c2ae936e219e186'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `348c385` that touches `src/` or `pyproject.toml` is
+Any commit after `7474b28` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `348c385`'s: the commits after it touch only this file
+sentence. Its code is `7474b28`'s: the commits after it touch only this file
 and `docs/`.
 
 **Marker history** (the old commit is recorded here before each move, as the
@@ -777,7 +787,8 @@ seat's grant requires):
 | 2026-11-09 | `57d54c1` | `4f6b2bd` | `41cc1fb` |
 | 2026-11-14 | `4f6b2bd` | `f5b8237` | `313ec51` |
 | 2026-11-21 | `f5b8237` | `77facd7` | `5e5bc7d` |
-| 2026-11-21 | `77facd7` | the commit adding this row | `348c385` |
+| 2026-11-21 | `77facd7` | `d73a8ef` | `348c385` |
+| 2026-11-21 | `d73a8ef` | the commit adding this row | `7474b28` |
 
 ---
 
