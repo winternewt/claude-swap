@@ -673,19 +673,89 @@ A wheel built from `git archive 313ec51` with `uv build` holds exactly
 scripts, and `Requires-Dist` `textual`, `truststore` and `rumps` (the
 `menubar` extra) only.
 
+### Also audited: fork PR #1 (Codex account switching), the merge `5477d73` and `5e5bc7d`
+
+Read on 2026-11-21 by the `downstream` seat, on the person's word ("chck and
+merge", in this seat's chat, relayed to desk #373 as option 1). Not an
+upstream release: the fork's own branch `feature/codex-port` (`cffde41`,
+`6a40610`, `c109717`), a port of Codex support from the MIT-licensed
+`errhythm/ccswap` at `e7f2513`, same copyright holder. 54 files, +18858 / −70;
+about 9,800 lines under `src/`, 9 new modules.
+
+**New network hosts, approved by the person** (the red flag that sent it to
+them): `chatgpt.com/backend-api` (`/wham/usage`, `/wham/rate-limit-reset-credits`,
+and `.../consume` only after a y/N prompt or `--yes`) and
+`auth.openai.com/oauth/token` (refresh grant, Codex's public client id
+`app_EMoamEEZ73f0CkXaXp7hrann`, URL hard-coded). `api.openai.com/auth`,
+`/profile` and `chat.openai.com` appear only as JWT claim names, never
+requested. Every call is `urllib` in `codex_usage.py`; no other new module
+touches the network. No other new host in `src/` (grep of every URL against
+`f5b8237`).
+
+Read in full, every line, by two Opus readers splitting the source (core:
+`codex.py`, `codex_usage.py`, `codex_usage_store.py`, `codex_autoswitch.py`,
+`reset_credit_display.py` and the diffs of `cli.py`, `usage_server.py`,
+`paths.py`, `json_output.py`, `settings.py`, `poll_policy.py`, `oauth.py`,
+`appearance.py`, `switcher.py`, `tui/dashboard.py`; process: `codex_session.py`,
+`codex_binary.py`, `process_detection.py`, `windows_job.py`,
+`tui/codex_watch.py` and the diffs of `menubar.py`, `launch_agent.py`). No red
+flag. What they found:
+
+- **Credentials.** `~/.codex/auth.json` and the saved slots
+  (`<XDG data>/claude-swap/codex/credentials/account-N.json`) are written
+  through mkstemp + fchmod 0600 + fsync + `os.replace`, directories 0700; an
+  unmanaged live login is refused, not overwritten, and the live one is saved
+  to its slot before a swap. Parse errors re-raise `from None` with fixed
+  text; no token reaches stdout, JSON output, logs or the usage socket (its
+  `codex` section: slot, kind, windows, credits, an error class name).
+- **Processes.** `pgrep -x codex`; `codex run` launches the `codex` found on
+  PATH with `shell=False`, its option parser refusing login- and
+  routing-changing `-c` keys; the version probe runs with a credential-free
+  environment in a temp home. Signals go only to children cswap started;
+  `prctl(PR_SET_CHILD_SUBREAPER)` on itself. ctypes: `renameat2` with
+  `RENAME_NOREPLACE`. The Linux `/proc` scan reads `environ` of the user's own
+  processes and keeps only `CODEX_HOME`.
+- **Persistence.** None on Linux. macOS: the LaunchAgent plist carries
+  `CODEX_HOME`; Codex auto-switch in the menu bar is off by default.
+- **Destructive.** `rmtree`/`unlink` confined to the session homes under the
+  backup root, after ownership and link checks; a slot is deleted only after a
+  prompt; `cswap purge` now also removes `codex/` (warned).
+- **Accepted concerns.** (1) `chatgpt_base_url` in `$CODEX_HOME/config.toml`
+  redirects the usage calls and their bearer tokens, as it redirects Codex
+  itself; unset here. (2) A 30x from the backend would carry `Authorization`
+  to the redirect target (urllib's default), the same plain `urlopen` the
+  audited Anthropic code uses. (3) Windows only: `shutil.which` searches the
+  current directory first. (4) Session homes symlink the shared Codex config,
+  prompts and skills, by design; never `auth.json`.
+
+**Two fixes before the merge.** `c109717` (the branch's author, after this
+seat's review): the Codex setup made the data directory before
+`migrate_legacy_backup_dir` ran, so a later migration would refuse, or on an
+interrupted one `rmtree` the stored Codex logins; it now migrates first,
+under a lock, and refuses a destination holding `codex/`. `5e5bc7d` (this seat):
+on this machine's kernel a zombie's `/proc/PID/environ` answers ESRCH, not
+empty, so any zombie left every Codex scan "uncertain" and blocked switching
+(two leftover `codex` zombies here); the real-`/proc` smoke test failed on it.
+
+**Checked.** `nice -n 19 uv run pytest -q` on `5e5bc7d`: 5825 passed, 18 skipped.
+`pyproject.toml` and `uv.lock` unchanged since `f5b8237`, so the runtime
+dependencies are too. A wheel built with `uv build --wheel` holds exactly
+`src/claude_swap/`, every file byte-identical to the tree, no `.pth`, the two
+console scripts.
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==1.1.0'       # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@313ec512d078c5718e6634ae5d589a7b4d43aa34'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@5e5bc7d972478981f872a08ba4067e5c2e9e9a74'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `313ec51` that touches `src/` or `pyproject.toml` is
+Any commit after `5e5bc7d` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `313ec51`'s: the commits after it touch only this file
+sentence. Its code is `5e5bc7d`'s: the commits after it touch only this file
 and `docs/`.
 
 **Marker history** (the old commit is recorded here before each move, as the
@@ -697,7 +767,8 @@ seat's grant requires):
 | 2026-10-16 | `d138f8d` | `a2b2f43` | `59d9ffb` |
 | 2026-11-04 | `a2b2f43` | `57d54c1` | `babc945` |
 | 2026-11-09 | `57d54c1` | `4f6b2bd` | `41cc1fb` |
-| 2026-11-14 | `4f6b2bd` | the commit adding this row | `313ec51` |
+| 2026-11-14 | `4f6b2bd` | `f5b8237` | `313ec51` |
+| 2026-11-21 | `f5b8237` | the commit adding this row | `5e5bc7d` |
 
 ---
 
