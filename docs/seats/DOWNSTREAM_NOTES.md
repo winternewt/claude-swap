@@ -1,12 +1,13 @@
 # Downstream seat — notes
 
-State as of 2026-11-19.
+State as of 2026-11-21.
 
 ## Marker
 
-- `audited` (a tag) → `f5b8237`, the record of the upstream `v1.1.0` adoption, moved on 2026-11-14 from `4f6b2bd`.
-  Its code is `313ec51` (the merge of upstream `v1.1.0`, gated, rebuilt byte-identical). The history is in
-  SECURITY_AUDIT.md's marker table; `cswap upgrade` installed it here (1.1.0).
+- `audited` (a tag) → `77facd7`, the record of the PR #1 adoption (Codex account switching), moved on 2026-11-21
+  from `f5b8237`. Its code is `5e5bc7d` (the merge of `feature/codex-port` plus this seat's zombie fix), read in full,
+  tests green, wheel byte-identical. `cswap upgrade` installed it here (1.1.0 at 77facd7, installed files == source).
+  The OpenAI/ChatGPT hosts are approved (the person, desk #373, 2026-11-21: "chck and merge").
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
 
@@ -60,10 +61,7 @@ State as of 2026-11-19.
 
 ## Open with the person
 
-- PR #1 on the fork (`feature/codex-port`, Codex account switching, 6a40610): `blocked: desk #373` (2026-11-20). It
-  adds hosts api.openai.com, auth.openai.com, chatgpt.com, chat.openai.com, which need the person's word. Bug found:
-  the Codex setup mkdirs the XDG backup root before `migrate_legacy_backup_dir`; the fix calls the migration first.
-  Default on silence: unmerged. On option 1: fix commit, full read, wheel vs source, audit row, merge, `audited`, upgrade.
+- PR #1 merged 2026-11-21 (desk #373 answered, option 1). Worktree `.worktrees/codex-merge` unlocked, for the person to remove.
 - Desk #351 (2026-11-16) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
   pin no longer governs the seat's watchdog, which runs in the machine's one watchdog (the kit's D205); the pin moved
   past the hold to v0.1.229. #349 was withdrawn as superseded by it.
