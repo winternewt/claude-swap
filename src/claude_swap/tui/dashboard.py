@@ -89,6 +89,7 @@ class DashboardScreen(Screen):
         return [
             ("From current Claude Code login", "add-login"),
             ("From a setup-token / API key…", "add-token"),
+            ("From current Codex login", "add-codex"),
             _BACK,
         ]
 
@@ -166,10 +167,13 @@ class DashboardScreen(Screen):
             "add-token": app.action_add_token,
             "quit": app.exit,
         }
-        if action_id == "codex":
+        if action_id in ("codex", "add-codex"):
             from claude_swap.tui.codex_watch import CodexWatch
 
-            app.push_screen(CodexWatch())
+            screen = CodexWatch()
+            app.push_screen(screen)
+            if action_id == "add-codex":
+                screen.action_add_current()
         elif action_id == "back":
             await self._pop_menu()
         elif action_id == "add-menu":

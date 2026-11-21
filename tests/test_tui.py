@@ -875,7 +875,7 @@ class TestDashboard:
             await pilot.press("down", "down", "down", "enter")
             await pilot.pause()
             ids = [item.action_id for item in menu.query(MenuItem)]
-            assert ids == ["add-login", "add-token", "back"]
+            assert ids == ["add-login", "add-token", "add-codex", "back"]
             await pilot.press("escape")
             await pilot.pause()
             ids = [item.action_id for item in menu.query(MenuItem)]

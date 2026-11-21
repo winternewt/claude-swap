@@ -10,7 +10,7 @@ cswap codex add
 codex login
 cswap codex add
 
-cswap codex watch                # interactive quota monitor and switcher
+cswap codex watch                # interactive quota monitor and switcher: s switch, a add the current login, x remove, d disable
 cswap codex list                 # accounts tagged by plan, e.g. [Codex Team]
 cswap codex usage                # Quota, credit allowance, and banked resets
 cswap codex switch 1

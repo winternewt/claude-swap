@@ -14,12 +14,16 @@ from claude_swap.codex import CodexAccountSwitcher, _codex_restart_hint
 from claude_swap.menubar import usage_summary
 from claude_swap.reset_credit_display import reset_credit_display
 from claude_swap.settings import load_settings
+from claude_swap.tui.data import ActionResult, run_action
+from claude_swap.tui.modals import ConfirmModal
 
 
 class CodexWatch(Screen):
     BINDINGS = [
         ("s", "switch", "Switch account"),
         ("d", "toggle_disabled", "Disable / enable"),
+        ("a", "add_current", "Add current login"),
+        ("x", "remove", "Remove account"),
         ("r", "refresh", "Refresh"),
         ("escape", "close", "Back"),
     ]
@@ -53,8 +57,7 @@ class CodexWatch(Screen):
             return
         self.busy = True
         try:
-            if operation:
-                await asyncio.to_thread(operation)
+            outcome = await asyncio.to_thread(operation) if operation else None
             snapshot = await asyncio.to_thread(self.switcher.accounts_snapshot)
             if not self.is_mounted:
                 return
@@ -72,10 +75,16 @@ class CodexWatch(Screen):
                 if current and current.number == account.number:
                     table.move_cursor(row=index)
             self._refresh_countdowns()
-            message = "Codex accounts" if self.accounts else "No saved accounts. Run cswap codex add after logging in."
+            message = ("Codex accounts" if self.accounts else
+                       "No saved accounts. Log in with codex, then press a to add that login.")
             if switched:
                 message = await asyncio.to_thread(_codex_restart_hint)
             self.query_one("#codex-status", Static).update(message)
+            if isinstance(outcome, ActionResult):
+                if outcome.ok:
+                    self.notify(outcome.first_line or "Done")
+                else:
+                    self.notify(outcome.first_line or "Failed", severity="error")
         except Exception as exc:
             if self.is_mounted:
                 self.query_one("#codex-status", Static).update(str(exc))
@@ -123,6 +132,39 @@ class CodexWatch(Screen):
         account = self._selected()
         if account:
             self._update(partial(self.switcher.set_account_disabled, account.number, not account.disabled))
+
+    def action_add_current(self):
+        self.app.push_screen(
+            ConfirmModal(
+                "Save the current Codex login as a managed account?\n\n"
+                "If this login is already managed, its stored credentials are refreshed in place.",
+                title="Add Codex account",
+                yes_label="Add",
+            ),
+            self._on_add_confirm,
+        )
+
+    def _on_add_confirm(self, confirmed):
+        if confirmed:
+            self._update(partial(run_action, self.switcher.add_account))
+
+    def action_remove(self):
+        account = self._selected()
+        if account is None:
+            return
+        self.app.push_screen(
+            ConfirmModal(
+                f"Remove Codex account {account.number} ({account.email})?\n\n"
+                "Its saved credentials are deleted. The live Codex login is not touched.",
+                title="Remove Codex account",
+                yes_label="Remove",
+            ),
+            partial(self._on_remove_confirm, account.number),
+        )
+
+    def _on_remove_confirm(self, number, confirmed):
+        if confirmed:
+            self._update(partial(run_action, partial(self.switcher.remove_account, number, assume_yes=True)))
 
     def action_close(self):
         if isinstance(self.app, CodexWatchApp):
