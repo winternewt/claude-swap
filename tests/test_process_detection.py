@@ -934,7 +934,13 @@ def test_codex_real_child_detection_and_quiescence(tmp_path):
         child.terminate()
         child.wait(timeout=5)
     result = detection.scan_codex_home(tmp_path, [])
-    assert result["state"] == "quiescent", result["issues"]
+    # The real /proc is shared with whatever else runs (parallel test workers'
+    # children carry CODEX_HOMEs already deleted), so judge only our child:
+    # gone from the live set and named by no issue.
+    assert child.pid not in result["pids"]
+    assert not any(f"PID {child.pid}:" in issue for issue in result["issues"]), result["issues"]
+    if not result["issues"]:
+        assert result["state"] == "quiescent"
 
 
 @pytest.mark.parametrize("filename, content", [
