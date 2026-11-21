@@ -65,7 +65,7 @@ State as of 2026-11-21.
   is a denial when the person is away. Option 1, a narrow guard exception for that one push from this folder, made by the
   october-mx sysadmin seat on the person's word (recommended); option 2, a fast-forward branch marker under a new name.
   Default: nothing changes; while away, a marker move waits for the person. No script may hide the push from the guard.
-  To file at idle: a behavior datapoint on kit edge DE5 (marker moves only by force push) — a guard asking on every
+  Filed as kit #576: a behavior datapoint on edge DE5 (marker moves only by force push) — a guard asking on every
   force push turns each unattended move into a stall.
 - PR #1 merged 2026-11-21 (desk #373 answered, option 1). Worktree `.worktrees/codex-merge` unlocked, for the person to remove.
 - Desk #351 (2026-11-16) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
