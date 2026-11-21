@@ -743,19 +743,27 @@ dependencies are too. A wheel built with `uv build --wheel` holds exactly
 `src/claude_swap/`, every file byte-identical to the tree, no `.pth`, the two
 console scripts.
 
+**Follow-up `348c385`** (this seat, on the person's word, 2026-11-21: no Codex
+add button in the TUI). The Codex screen binds `a` (save the current login)
+and `x` (remove the selected slot), each behind a `ConfirmModal`, calling the
+same `add_account()` / `remove_account(n, assume_yes=True)` the CLI runs,
+through `tui.data.run_action` (stdout captured, stdin empty). The dashboard's
+Add menu opens that screen on the add confirmation. TUI only: no new call,
+host, file or process. Tests: 5826 passed, 18 skipped.
+
 ### To run exactly the audited version
 
 ```bash
 uv tool install 'claude-swap==1.1.0'       # current stable — verified clean
 # or the audited fork commit (pin the full sha; a branch name moves):
-uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@5e5bc7d972478981f872a08ba4067e5c2e9e9a74'
+uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@348c3851b2f562b662c65f79554c6091a1a8a8e8'
 # or follow the fork's audited tag (what `cswap upgrade` runs):
 uv tool install --force --reinstall 'claude-swap @ git+https://github.com/winternewt/claude-swap.git@audited'
 ```
 
-Any commit after `5e5bc7d` that touches `src/` or `pyproject.toml` is
+Any commit after `348c385` that touches `src/` or `pyproject.toml` is
 **unaudited**. The `audited` tag points at the commit that records this
-sentence. Its code is `5e5bc7d`'s: the commits after it touch only this file
+sentence. Its code is `348c385`'s: the commits after it touch only this file
 and `docs/`.
 
 **Marker history** (the old commit is recorded here before each move, as the
@@ -768,7 +776,8 @@ seat's grant requires):
 | 2026-11-04 | `a2b2f43` | `57d54c1` | `babc945` |
 | 2026-11-09 | `57d54c1` | `4f6b2bd` | `41cc1fb` |
 | 2026-11-14 | `4f6b2bd` | `f5b8237` | `313ec51` |
-| 2026-11-21 | `f5b8237` | the commit adding this row | `5e5bc7d` |
+| 2026-11-21 | `f5b8237` | `77facd7` | `5e5bc7d` |
+| 2026-11-21 | `77facd7` | the commit adding this row | `348c385` |
 
 ---
 
