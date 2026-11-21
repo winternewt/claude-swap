@@ -23,8 +23,12 @@ request is read. The answer::
 ``resets_at`` is epoch seconds. A client must compare ``config_dir`` with its
 own before trusting the numbers: a different dir is a different account.
 
+The additive Codex section names its own config_dir, taken_at and active
+account. Its five_hour and seven_day windows come from the published quota
+file for the live login and current slot generation.
+
 READ-ONLY AND OFF THE NETWORK. Every answer is a ``store_only`` snapshot: the
-server never makes the store fetch. Its hosts (the TUI, ``cswap auto``)
+server never makes the store fetch. Its hosts (the dashboards and continuous auto-switch commands)
 collect on their own schedule, and the answer is as fresh as that.
 
 Where: ``$CSWAP_USAGE_SOCKET`` if set (empty disables the server), else
@@ -87,6 +91,40 @@ def _window(w: object) -> dict | None:
     return {"pct": float(w["pct"]), "resets_at": _epoch(w.get("resets_at"))}
 
 
+def _active_usage(number, kind, usage, windows):
+    return {
+        "number": number, "kind": kind, "sentinel": usage.sentinel,
+        "fetched_at": usage.fetched_at, "age_s": usage.age_s,
+        "backoff_until": usage.backoff_until, "last_error": usage.last_error,
+        "windows": windows,
+    }
+
+
+def _codex_payload(switcher, now):
+    section = {"config_dir": str(switcher.codex_home.resolve()), "taken_at": now, "active": None}
+    current = switcher.active_cached_usage(now)
+    if current is None:
+        return section
+    number, kind, usage = current
+    good = usage.last_good or {}
+    windows = {}
+    for source, key in (("five_hour", "five_hour"), ("weekly", "seven_day")):
+        window = _window(good.get(source))
+        if window is not None:
+            windows[key] = window
+    body = _active_usage(number, kind, usage, windows)
+    # read_usage has already projected these records onto typed, public fields.
+    for key in ("credits", "credit_allowance", "reset_credits"):
+        if key in good:
+            details = good[key].copy()
+            for time_key in ("resets_at", "expires_at"):
+                if time_key in details:
+                    details[time_key] = _epoch(details[time_key])
+            body[key] = details
+    section["active"] = body
+    return section
+
+
 def payload(snap, config_dir: Path) -> dict:
     """The schema-1 answer for one ``AccountsSnapshot``."""
     active = next((a for a in snap.accounts if a.is_active), None)
@@ -106,16 +144,7 @@ def payload(snap, config_dir: Path) -> dict:
         ]
         if scoped:
             windows["scoped"] = scoped
-        body = {
-            "number": active.number,
-            "kind": active.kind,
-            "sentinel": u.sentinel,
-            "fetched_at": u.fetched_at,
-            "age_s": u.age_s,
-            "backoff_until": u.backoff_until,
-            "last_error": u.last_error,
-            "windows": windows,
-        }
+        body = _active_usage(active.number, active.kind, u, windows)
     from claude_swap import __version__
 
     return {
@@ -144,11 +173,18 @@ def _live(path: Path) -> bool:
 class UsageServer:
     """Serves store-only snapshots of ``switcher`` on ``path`` from a daemon thread."""
 
-    def __init__(self, switcher, path: Path) -> None:
+    def __init__(self, switcher, path: Path, *, codex_switcher=None) -> None:
+        from claude_swap.codex import CodexAccountSwitcher
         from claude_swap.snapshot_source import SnapshotSource
 
         self.path = path
+        if switcher is None:
+            from claude_swap.switcher import ClaudeAccountSwitcher
+
+            switcher = ClaudeAccountSwitcher(initialize_storage=False)
         self._source = SnapshotSource(switcher)
+        self._codex = (codex_switcher if codex_switcher is not None
+                       else CodexAccountSwitcher(initialize_storage=False))
         self._config_dir = paths.get_claude_config_home().resolve()
         self._sock: socket.socket | None = None
         self._ino: int | None = None
@@ -196,8 +232,18 @@ class UsageServer:
         with self._lock:
             now = time.time()
             if self._answer is None or now - self._answer[0] >= ANSWER_TTL_S:
-                snap = self._source.take(store_only=True)
-                body = json.dumps(payload(snap, self._config_dir)).encode() + b"\n"
+                try:
+                    result = payload(self._source.take(store_only=True), self._config_dir)
+                except Exception as exc:
+                    result = {"schema": SCHEMA, "server": "claude-swap", "error": f"snapshot failed: {exc!r}"}
+                try:
+                    result["codex"] = _codex_payload(self._codex, now)
+                except Exception:
+                    logger.warning("usage server: could not read Codex snapshot")
+                    result["codex"] = {"active": None, "error": "Codex snapshot unavailable"}
+                body = json.dumps(result).encode() + b"\n"
+                if "error" in result or "error" in result["codex"]:
+                    return body
                 self._answer = (now, body)
             return self._answer[1]
 
@@ -220,10 +266,10 @@ class UsageServer:
 
 
 @contextlib.contextmanager
-def serving(switcher) -> Iterator[UsageServer | None]:
+def serving(switcher=None, *, codex_switcher=None) -> Iterator[UsageServer | None]:
     """Run the usage server for the duration of a long-lived command, if it should run."""
     path = socket_path()
-    server = UsageServer(switcher, path) if path is not None else None
+    server = UsageServer(switcher, path, codex_switcher=codex_switcher) if path is not None else None
     if server is not None and not server.start():
         server = None
     try:

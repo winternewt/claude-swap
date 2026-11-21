@@ -92,7 +92,7 @@ _BASE_PATH_DIRS = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 # name as cancelling its uppercase twin (`https_proxy=` switches off an
 # `HTTPS_PROXY`), so dropping it would hand the agent a proxy the shell had
 # turned off. launchd sets an empty string as an empty variable.
-_PROFILE_ENV_KEYS = ("CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME")
+_PROFILE_ENV_KEYS = ("CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "XDG_DATA_HOME", "CODEX_HOME")
 _FORWARDED_ENV_KEYS = (
     "https_proxy", "HTTPS_PROXY", "http_proxy", "HTTP_PROXY",
     "no_proxy", "NO_PROXY", "SSL_CERT_FILE", "SSL_CERT_DIR",
@@ -311,6 +311,14 @@ def _plist_dict(
     out_log, err_log = log_paths(label, home)
     env = os.environ if env is None else env
     forwarded = {k: env[k] for k in _FORWARDED_ENV_KEYS if k in env}
+    if forwarded.get("CODEX_HOME"):
+        codex_home = Path(forwarded["CODEX_HOME"]).expanduser().resolve()
+        # launchd has a different cwd. Persist ordinary custom homes as
+        # absolute paths and keep per-account session homes out of the service.
+        if codex_home.parent.parts[-2:] == ("codex", "sessions"):
+            del forwarded["CODEX_HOME"]
+        else:
+            forwarded["CODEX_HOME"] = str(codex_home)
     return {
         "Label": label,
         "ProgramArguments": program_arguments(program),

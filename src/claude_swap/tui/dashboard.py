@@ -80,6 +80,7 @@ class DashboardScreen(Screen):
             ("Add account…", "add-menu"),
             ("Disable / enable account…", "disable-menu"),
             ("Remove account…", "remove-menu"),
+            ("Codex accounts and quota", "codex"),
             ("Theme…", "theme-menu"),
             ("Quit", "quit"),
         ]
@@ -165,7 +166,11 @@ class DashboardScreen(Screen):
             "add-token": app.action_add_token,
             "quit": app.exit,
         }
-        if action_id == "back":
+        if action_id == "codex":
+            from claude_swap.tui.codex_watch import CodexWatch
+
+            app.push_screen(CodexWatch())
+        elif action_id == "back":
             await self._pop_menu()
         elif action_id == "add-menu":
             await self._push_menu("add account", self._add_entries())

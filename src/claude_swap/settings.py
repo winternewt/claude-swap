@@ -77,6 +77,8 @@ class AutoSwitchSettings:
     # 5h/7d windows still have headroom. None = account-wide 5h/7d only
     # (default).
     model: str | None = None
+    threshold_5h: float | None = None
+    threshold_7d: float | None = None
 
 
 @dataclass(frozen=True)
@@ -177,6 +179,14 @@ SETTING_SPECS: dict[str, SettingSpec] = {
         SettingSpec(
             "autoswitch", "weeklyThreshold", "weekly_threshold", "float", 50.0, 99.9,
             help="Switch line for the 7d and per-model windows (unset: threshold)",
+        ),
+        SettingSpec(
+            "autoswitch", "threshold5h", "threshold_5h", "float", 1.0, 99.9,
+            help="Codex five-hour utilization threshold",
+        ),
+        SettingSpec(
+            "autoswitch", "threshold7d", "threshold_7d", "float", 1.0, 99.9,
+            help="Codex weekly utilization threshold",
         ),
         SettingSpec(
             "autoswitch", "intervalSeconds", "interval_seconds", "float", 15.0, 3600.0,

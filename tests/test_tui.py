@@ -867,6 +867,7 @@ class TestDashboard:
                 "add-menu",
                 "disable-menu",
                 "remove-menu",
+                "codex",
                 "theme-menu",
                 "quit",
             ]

@@ -49,3 +49,7 @@ The two projections stay `--json`-only, since a linear projection is too rough t
 ## `cswap auto --json`
 
 `cswap auto --json` emits an event stream instead: one JSON object per line (`{"schemaVersion":1,"event":"switch","ts":…, …}`) with kinds like `poll`, `switch`, `no-switch`, `account-quarantined`, `all-exhausted`, `error`. The contract is additive: new kinds and fields may appear, so scripts should ignore unknown ones.
+
+## Codex accounts
+
+`cswap list --provider codex --json` and `cswap codex list --json` return the same account roster, including saved quota readings and session status. To include the Claude roster, specify `--provider all` and read the `claude` and `codex` keys. Bare `cswap list --json` keeps the Claude schema. Use `cswap codex usage --json` to request current readings. [Codex fields and freshness](codex.md)

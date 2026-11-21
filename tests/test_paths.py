@@ -364,3 +364,39 @@ class TestMigrateLegacyBackupDir:
         moved = target / "credentials" / ".creds-1-user@example.com.enc"
         assert moved.stat().st_mode & 0o777 == 0o600
         assert (target / "credentials").stat().st_mode & 0o777 == 0o700
+
+
+def test_simultaneous_first_commands_share_one_migration(isolated_home, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from claude_swap import paths
+
+    legacy = get_legacy_backup_root()
+    legacy.mkdir()
+    (legacy / "sequence.json").write_text("original")
+    target = isolated_home / "xdg" / "claude-swap"
+    copying = Event()
+    second_lock_attempt = Event()
+    original_move = paths.shutil.move
+    original_acquire = paths.FileLock.acquire
+
+    def slow_move(src, dst):
+        copying.set()
+        assert second_lock_attempt.wait(5)
+        return original_move(src, dst)
+
+    def acquire(lock, *args, **kwargs):
+        if copying.is_set():
+            second_lock_attempt.set()
+        return original_acquire(lock, *args, **kwargs)
+
+    monkeypatch.setattr(paths.shutil, "move", slow_move)
+    monkeypatch.setattr(paths.FileLock, "acquire", acquire)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(migrate_legacy_backup_dir, target)
+        assert copying.wait(5)
+        second = pool.submit(migrate_legacy_backup_dir, target)
+        assert first.result() is True
+        assert second.result() is False
+    assert (target / "sequence.json").read_text() == "original"

@@ -9,6 +9,7 @@ import os
 import sys
 
 from claude_swap import __version__, paths, printer
+from claude_swap.codex import CodexAccountSwitcher
 from claude_swap.exceptions import ClaudeSwitchError
 from claude_swap.json_output import error_envelope
 from claude_swap.models import (
@@ -1402,6 +1403,190 @@ def _menubar_service(args) -> int:
     return 0
 
 
+class _CodexRunParser(argparse.ArgumentParser):
+    """Keep wrapper help on stderr and invalid arguments out of diagnostics."""
+
+    def _print_message(self, message, file=None) -> None:
+        super()._print_message(message, sys.stderr)
+
+    def error(self, message) -> None:
+        super().error("Invalid Codex run arguments; wrapper options must precede --.")
+
+
+def _codex_command(argv: list[str]) -> None:
+    """Handle ``cswap codex`` account management commands."""
+    is_run = next((arg for arg in argv if not arg.startswith("-")), None) == "run"
+    parser_type = _CodexRunParser if is_run else argparse.ArgumentParser
+    parser = parser_type(
+        prog=f"{_prog_name()} codex",
+        description=(
+            "Manage file-backed Codex CLI accounts. Run 'codex login' for an "
+            "account, then use 'cswap codex add' to save it."
+        ),
+    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    subcommands = parser.add_subparsers(dest="action", required=True)
+    for name, help_text in (
+        ("list", "List managed Codex accounts"),
+        ("status", "Show active Codex account"),
+        ("usage", "Fetch Codex subscription usage and diagnostic errors"),
+    ):
+        command = subcommands.add_parser(name, help=help_text)
+        command.add_argument("--json", action="store_true")
+    subcommands.add_parser("watch", help="Watch Codex quota and switch accounts interactively")
+    for action in ("disable", "enable"):
+        subcommands.add_parser(action).add_argument("account", metavar="NUM|EMAIL")
+    run = subcommands.add_parser("run", help="Run Codex as a saved account", allow_abbrev=False)
+    run.add_argument("account", nargs="?", metavar="NUM|EMAIL")
+    run.add_argument("--require-session", action="store_true",
+                     help="Refuse the unisolated default-login shortcut")
+    run.add_argument("--shared", action="store_true",
+                     help="Join a live session, accepting refresh-token races")
+
+
+    redeem = subcommands.add_parser(
+        "redeem-reset", help="Redeem one banked reset for a saved Codex account"
+    )
+    redeem.add_argument("account", metavar="NUM|EMAIL")
+    redeem.add_argument("--yes", action="store_true", help="Skip confirmation")
+    redeem.add_argument("--json", action="store_true")
+    add = subcommands.add_parser("add", help="Save the current Codex login")
+    add.add_argument("--slot", type=int, metavar="N")
+    switch = subcommands.add_parser("switch", help="Switch to the next or named Codex account")
+    switch.add_argument("account", nargs="?", metavar="NUM|EMAIL")
+    switch.add_argument("--json", action="store_true")
+    switch.add_argument(
+        "--strategy",
+        choices=["best", "next-available", "consume-first"],
+        help=(
+            "With bare 'switch': pick the Codex target by remaining 5h/Weekly quota. "
+            "'best' jumps to the account with the most headroom; "
+            "'next-available' rotates to the next account, skipping any at their limit; "
+            "'consume-first' jumps to the account with headroom whose weekly "
+            "window resets soonest, so no quota is lost at a reset"
+        ),
+    )
+    remove = subcommands.add_parser("remove", help="Remove a saved Codex account")
+    remove.add_argument("account", metavar="NUM|EMAIL")
+    remove.add_argument("--yes", action="store_true", help="Skip confirmation")
+    auto = subcommands.add_parser(
+        "auto",
+        help="Switch Codex accounts when the active quota nears its limit",
+        description=(
+            "Watch Codex subscription usage and select a better saved account. "
+            "A running Codex session must be restarted after a switch."
+        ),
+    )
+    auto.add_argument("--once", action="store_true", help="Evaluate once and exit")
+    auto.add_argument("--json", action="store_true", help="Emit JSONL events")
+    auto.add_argument("--interval", type=float, metavar="SECONDS")
+    auto.add_argument("--threshold", type=float, metavar="PCT")
+    auto.add_argument("--cooldown", type=float, metavar="SECONDS")
+    auto.add_argument("--dry-run", action="store_true", help="Report decisions without switching")
+    boundary = argv.index("--") if "--" in argv else len(argv)
+    # Keep the child tail out of parsing and diagnostics.
+    args = parser.parse_args(argv[:boundary] if is_run else argv)
+    codex_args = argv[boundary + 1:]
+    if args.action == "switch" and args.account and args.strategy:
+        parser.error("--strategy can only be used with bare 'switch'")
+
+    if args.action == "redeem-reset" and args.json and not args.yes:
+        parser.error("--json requires --yes")
+
+    try:
+        if args.action == "run":
+            from pathlib import Path
+
+            from claude_swap.codex_session import refuse_inherited_home, run_session
+
+            refuse_inherited_home(os.environ)
+            switcher = CodexAccountSwitcher(debug=args.debug)
+            sys.exit(run_session(switcher, args.account, require_session=args.require_session,
+                                 shared=args.shared, codex_args=codex_args,
+                                 env=os.environ, cwd=Path.cwd()))
+        switcher = CodexAccountSwitcher(debug=args.debug)
+        if args.action == "watch":
+            from claude_swap.tui.codex_watch import CodexWatchApp
+
+            from claude_swap.usage_server import serving
+
+            with serving(codex_switcher=switcher):
+                CodexWatchApp(switcher).run()
+        elif args.action in ("disable", "enable"):
+            switcher.set_account_disabled(args.account, args.action == "disable")
+        elif args.action == "list":
+            switcher.list_accounts(json_output=args.json)
+        elif args.action == "status":
+            switcher.status(json_output=args.json)
+        elif args.action == "usage":
+            switcher.usage_status(json_output=args.json)
+        elif args.action == "redeem-reset":
+            switcher.redeem_reset(args.account, assume_yes=args.yes, json_output=args.json)
+        elif args.action == "add":
+            switcher.add_account(slot=args.slot)
+        elif args.action == "remove":
+            switcher.remove_account(args.account, assume_yes=args.yes)
+        elif args.action == "auto":
+            import signal
+            import time as _time
+
+            from claude_swap.codex_autoswitch import CodexAutoSwitchEngine
+            from claude_swap.printer import accent, yellowed
+            from claude_swap.settings import load_settings, merged_with_cli
+
+            def emit(event) -> None:
+                if args.json:
+                    print(json.dumps(event.to_json()), flush=True)
+                    return
+                stamp = _time.strftime("%H:%M:%S")
+                line = event.human()
+                if event.kind == "switch":
+                    line = accent(line)
+                elif event.kind == "error":
+                    line = yellowed(line)
+                else:
+                    line = dimmed(line)
+                print(f"{stamp}  {line}", flush=True)
+
+            settings = merged_with_cli(load_settings(switcher.backup_dir), args)
+            engine = CodexAutoSwitchEngine(
+                switcher, settings, emit, dry_run=args.dry_run
+            )
+            if args.once:
+                sys.exit(engine.tick().value)
+            if not args.json:
+                print(
+                    dimmed(
+                        f"Codex auto-switch running: threshold {settings.threshold:.0f}%, "
+                        f"every {settings.interval_seconds:.0f}s"
+                        f"{' (dry-run)' if args.dry_run else ''} — Ctrl-C to stop"
+                    )
+                )
+            signal.signal(signal.SIGTERM, lambda *_: engine.stop())
+            from claude_swap.usage_server import serving
+
+            with serving(codex_switcher=switcher):
+                sys.exit(engine.run_loop())
+        else:
+            if args.account:
+                result = switcher.switch_to(args.account, json_output=args.json)
+            else:
+                result = switcher.switch(strategy=args.strategy, json_output=args.json)
+            if args.json:
+                print(json.dumps(result, indent=2))
+    except ClaudeSwitchError as exc:
+        if getattr(args, "json", False):
+            print(json.dumps(error_envelope(exc)))
+        else:
+            error(f"Error: {exc}")
+        sys.exit(1)
+    except OSError:
+        if args.action != "run":
+            raise
+        error("Cannot initialize the Codex run; no new session writer started.")
+        sys.exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     force_utf8_output()
@@ -1417,6 +1602,10 @@ def main() -> None:
         printer.set_theme(name)
     except Exception:
         pass  # theme is cosmetic; never block the CLI on it
+
+    if argv[:1] == ["codex"]:
+        _codex_command(argv[1:])
+        return
 
     # `run` and `auto` keep their dedicated pre-dispatch parsers.
     if argv and argv[0] == "run":
@@ -1505,6 +1694,7 @@ Commands:
   %(prog)s watch                      dashboard, opened on the live watch page
   %(prog)s menubar                    macOS menu bar app, kept running by launchd
   %(prog)s menubar --service-status   is it running? does it start at login?
+  %(prog)s codex COMMAND              manage Codex accounts and quota
   %(prog)s upgrade                    self-upgrade to latest
   %(prog)s purge                      remove all claude-swap data
 
@@ -1679,6 +1869,8 @@ The original flag spellings (%(prog)s --switch, %(prog)s --list, ...) keep worki
     # The group is not `required` because the "no command" case is handled
     # explicitly below (a required group with every member suppressed prints a
     # broken empty-list error).
+    parser.add_argument("--provider", choices=("claude", "codex", "all"),
+                        help="Provider for list (default: claude)")
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
         "--add-account",
@@ -1815,6 +2007,10 @@ The original flag spellings (%(prog)s --switch, %(prog)s --list, ...) keep worki
         if value is not None and not value:
             parser.error(f"'{subcommand}' requires a non-empty {metavar}")
 
+    if args.provider and not args.list:
+        parser.error("--provider requires list")
+    if args.provider == "codex" and args.token_status:
+        parser.error("--token-status applies to Claude accounts")
     if args.token_status and not args.list:
         parser.error("--token-status can only be used with 'list'")
 
@@ -1902,6 +2098,9 @@ The original flag spellings (%(prog)s --switch, %(prog)s --list, ...) keep worki
     # serializes it (so no command writes JSON to stdout itself).
     payload: dict | None = None
     try:
+        if args.list and args.provider == "codex":
+            CodexAccountSwitcher(debug=args.debug).list_accounts(json_output=args.json)
+            return
         switcher = ClaudeAccountSwitcher(debug=args.debug)
 
         # Check for root (unless in container) - POSIX only
@@ -1925,10 +2124,22 @@ The original flag spellings (%(prog)s --switch, %(prog)s --list, ...) keep worki
         elif args.enable_account is not None:
             switcher.set_account_disabled(args.enable_account, False)
         elif args.list:
-            payload = switcher.list_accounts(
-                show_token_status=args.token_status,
-                json_output=args.json,
-            )
+            if args.provider == "all" and not args.json:
+                print(bolded("Claude Code"))
+            if args.provider == "all" and not args.json and not switcher.sequence_file.exists():
+                print(dimmed("No managed Claude Code accounts."))
+            else:
+                payload = switcher.list_accounts(
+                    show_token_status=args.token_status,
+                    json_output=args.json,
+                )
+            if args.provider == "all":
+                codex = CodexAccountSwitcher(debug=args.debug)
+                if args.json:
+                    payload = {"claude": payload, "codex": codex.list_payload()}
+                else:
+                    print(bolded("Codex"))
+                    codex.list_accounts()
         elif args.switch:
             from claude_swap.settings import load_settings, parse_model_names
 

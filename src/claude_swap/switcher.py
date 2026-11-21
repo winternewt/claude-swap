@@ -416,7 +416,9 @@ def _same_directory(left: Path, right: Path) -> bool:
 class ClaudeAccountSwitcher:
     """Multi-account switcher for Claude Code."""
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, *, initialize_storage: bool = True):
+        # A Codex-hosted quota socket only observes the existing Claude store.
+        self._initialize_storage = initialize_storage
         self.home = Path.home()
         self.platform = Platform.detect()
         self.backup_dir = get_backup_root()
@@ -426,7 +428,7 @@ class ClaudeAccountSwitcher:
         # Migration is a no-op on macOS/Windows where backup_dir already
         # equals the legacy path. MigrationError on a genuine collision
         # propagates as a ClaudeSwitchError and is caught by the CLI.
-        if migrate_legacy_backup_dir(self.backup_dir):
+        if initialize_storage and migrate_legacy_backup_dir(self.backup_dir):
             legacy = get_legacy_backup_root()
             print(
                 f"claude-swap: migrated data from {legacy} to {self.backup_dir}",
@@ -437,7 +439,8 @@ class ClaudeAccountSwitcher:
         self.configs_dir = self.backup_dir / "configs"
         self.credentials_dir = self.backup_dir / "credentials"
         self.lock_file = self.backup_dir / ".lock"
-        self._logger = setup_logging(self.backup_dir, debug=debug)
+        self._logger = (setup_logging(self.backup_dir, debug=debug) if initialize_storage
+                        else logging.getLogger("claude-swap"))
         self._usage_store = UsageStore(self.backup_dir / "cache")
         # (settings mtime, (threshold, weekly_threshold, models)) — see
         # _poll_policy_inputs.
@@ -498,7 +501,8 @@ class ClaudeAccountSwitcher:
         # aborts construction. No-op on fresh installs / once recorded.
         from claude_swap.migrations import run_migrations
 
-        run_migrations(self)
+        if initialize_storage:
+            run_migrations(self)
 
     def _is_running_in_container(self) -> bool:
         """Check if running inside a container."""
@@ -3992,7 +3996,7 @@ class ClaudeAccountSwitcher:
             "organizationUuid" not in acc
             for acc in data.get("accounts", {}).values()
         )
-        if needs_migration:
+        if needs_migration and self._initialize_storage:
             self._migrate_org_fields()
             data = self._get_sequence_data()  # Re-read after migration
         return data
@@ -8282,6 +8286,9 @@ class ClaudeAccountSwitcher:
             print("  - All stored account credentials (macOS Keychain and/or files)")
         else:
             print("  - All stored account credential files")
+        if (self.backup_dir / "codex").is_dir() or (legacy_distinct and (legacy / "codex").is_dir()):
+            warning("  - Saved Codex credentials, quota snapshots and private session history")
+            print("    Close Codex sessions and stop quota watchers before purging.")
         if session_dirs:
             print("  - All session profiles and their Keychain entries")
         # The quarantine tree sits inside the backup dir, so rmtree below takes
