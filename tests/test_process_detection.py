@@ -1208,6 +1208,22 @@ def test_codex_pid_reuse_during_uid_read_is_retried(codex_proc, tmp_path, monkey
     assert reads == 3
 
 
+@pytest.mark.parametrize("state, expected", [("Z", "quiescent"), ("S", "uncertain")])
+def test_codex_environ_refused_with_esrch(codex_proc, tmp_path, monkeypatch, state, expected):
+    """A kernel that answers a zombie's environ with ESRCH, not empty data."""
+    root, process = codex_proc
+    directory = process(env=b"", state=state)
+    original = Path.read_bytes
+
+    def refused(path):
+        if path == directory / "environ":
+            raise ProcessLookupError(3, "No such process")
+        return original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", refused)
+    assert detection.scan_codex_home(tmp_path, [], proc_root=root)["state"] == expected
+
+
 @pytest.mark.parametrize("thread_state, expected", [("Z", "quiescent"), ("S", "uncertain")])
 def test_codex_zombie_leader_threads(codex_proc, tmp_path, thread_state, expected):
     root, process = codex_proc

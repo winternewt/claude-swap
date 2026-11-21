@@ -561,6 +561,12 @@ def _scan_codex_linux_pid(pid: int, home: Path, proc_root: Path, boot: str) -> t
                     data = (directory / "environ").read_bytes()
                 except PermissionError:
                     denied = True
+                except ProcessLookupError:
+                    # Some kernels refuse a zombie's environ (ESRCH) where
+                    # others read it empty: the same zombie, judged alike.
+                    if before[1] != "Z":
+                        raise
+                    result = (False, _codex_zombie_issues(pid, proc_root, boot))
                 else:
                     if data:
                         result = _codex_env_home(data, home, directory, proc_root)
