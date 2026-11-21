@@ -4,9 +4,9 @@ State as of 2026-11-21.
 
 ## Marker
 
-- `audited` (a tag) → `77facd7`, the record of the PR #1 adoption (Codex account switching), moved on 2026-11-21
+- `audited` (a tag) → `d73a8ef` (2026-11-21, the TUI Codex add/remove follow-up `348c385`; before it `77facd7`, the PR #1 adoption, Codex account switching), moved on 2026-11-21
   from `f5b8237`. Its code is `5e5bc7d` (the merge of `feature/codex-port` plus this seat's zombie fix), read in full,
-  tests green, wheel byte-identical. `cswap upgrade` installed it here (1.1.0 at 77facd7, installed files == source).
+  tests green, wheel byte-identical. `cswap upgrade` installed it here (1.1.0 at d73a8ef, installed files == source).
   The OpenAI/ChatGPT hosts are approved (the person, desk #373, 2026-11-21: "chck and merge").
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
