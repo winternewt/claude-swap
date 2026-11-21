@@ -31,6 +31,7 @@ import stat
 from pathlib import Path
 
 from claude_swap.exceptions import MigrationError
+from claude_swap.locking import FileLock
 from claude_swap.models import Platform
 
 LEGACY_BACKUP_DIRNAME = ".claude-swap-backup"
@@ -192,8 +193,8 @@ def migrate_legacy_backup_dir(target: Path) -> bool:
     *before* the move and removing it *after* lets us tell an interrupted
     migration apart from a foreign collision on the next run:
 
-    * Flag present, legacy still there → resume (discard any partial target
-      and retry).
+    * Flag present, legacy still there → resume (discard the partial target
+      and retry), unless the target contains potentially independent Codex data.
     * Flag present, legacy gone → previous run completed but didn't get to
       clean the flag; just unlink it.
     * No flag, both paths exist → genuine collision, refuse — *unless* the
@@ -218,33 +219,51 @@ def migrate_legacy_backup_dir(target: Path) -> bool:
 
     flag = migration_flag_for(target)
 
-    if not legacy.exists():
-        # Successful prior run that died before unlinking the flag.
-        flag.unlink(missing_ok=True)
+    if not legacy.exists() and not flag.exists():
         return False
 
     try:
-        if flag.exists():
-            # Prior run was interrupted before completion. Discard any
-            # (potentially partial) target and retry the move from legacy.
-            if target.exists():
-                shutil.rmtree(target)
-        elif target.exists():
-            if _target_has_meaningful_data(target):
-                raise MigrationError(
-                    f"Both legacy ({legacy}) and new ({target}) backup paths exist. "
-                    f"Refusing to merge or overwrite — inspect both and remove the "
-                    f"stale one manually before re-running."
-                )
-            _wipe_throwaway_artifacts(target)
-
-        target.parent.mkdir(parents=True, exist_ok=True)
-        flag.touch()
-        shutil.move(legacy, target)
-        flag.unlink()
+        # The marker alone cannot distinguish a crash from a move still
+        # copying files. Both providers wait outside the tree being moved.
+        with FileLock(flag.with_suffix(".migration.lock")):
+            return _move_legacy_store(legacy, target, flag)
     except OSError as exc:
-        raise MigrationError(
-            f"Migration of {legacy} → {target} failed: {exc}"
-        ) from exc
+        raise MigrationError(f"Migration of {legacy} → {target} failed: {exc}") from exc
 
+
+def _move_legacy_store(legacy: Path, target: Path, flag: Path) -> bool:
+    if not legacy.exists():
+        flag.unlink(missing_ok=True)
+        return False
+
+    if flag.exists():
+        # Prior run was interrupted before completion. Discard any
+        # (potentially partial) target and retry the move from legacy.
+        if target.exists():
+            # An earlier Codex build could have added independent logins
+            # to this destination while the migration was interrupted.
+            try:
+                (target / "codex").lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                raise MigrationError(
+                    f"Interrupted migration from {legacy} to {target}: the destination "
+                    "contains Codex data. Back up both directories and reconcile them "
+                    "before retrying. Both directories have been preserved."
+                )
+            shutil.rmtree(target)
+    elif target.exists():
+        if _target_has_meaningful_data(target):
+            raise MigrationError(
+                f"Both legacy ({legacy}) and new ({target}) backup paths exist. "
+                f"Refusing to merge or overwrite — inspect both and remove the "
+                f"stale one manually before re-running."
+            )
+        _wipe_throwaway_artifacts(target)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    flag.touch()
+    shutil.move(legacy, target)
+    flag.unlink()
     return True

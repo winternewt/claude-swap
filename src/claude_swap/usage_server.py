@@ -183,7 +183,8 @@ class UsageServer:
 
             switcher = ClaudeAccountSwitcher(initialize_storage=False)
         self._source = SnapshotSource(switcher)
-        self._codex = codex_switcher if codex_switcher is not None else CodexAccountSwitcher()
+        self._codex = (codex_switcher if codex_switcher is not None
+                       else CodexAccountSwitcher(initialize_storage=False))
         self._config_dir = paths.get_claude_config_home().resolve()
         self._sock: socket.socket | None = None
         self._ino: int | None = None

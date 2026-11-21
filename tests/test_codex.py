@@ -1153,3 +1153,64 @@ def test_usage_expiry_warning_preserves_json_and_survives_status(switcher, monke
     payload = instance.usage_status(json_output=True)
     assert payload["accounts"][0]["usage"] == usage
     assert "⚠" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_first_codex_add_migrates_claude_before_creating_slot(tmp_path, monkeypatch, interrupted):
+    from claude_swap import paths
+    from claude_swap.models import Platform
+    from claude_swap.switcher import ClaudeAccountSwitcher
+
+    monkeypatch.setattr(Platform, "detect", staticmethod(lambda: Platform.LINUX))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    home = tmp_path / "codex-home"
+    home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", str(home))
+    auth = _auth("alice@example.test", "first")
+    _write_live(home, auth)
+    legacy = paths.get_legacy_backup_root()
+    legacy.mkdir()
+    roster = {"accounts": {}, "sequence": []}
+    (legacy / "sequence.json").write_text(json.dumps(roster))
+    cred = legacy / "credentials" / ".creds-1-alice@example.test.enc"
+    cred.parent.mkdir()
+    cred.write_bytes(b"synthetic Claude credential")
+    target = paths.get_backup_root()
+    if interrupted:
+        target.mkdir(parents=True)
+        (target / "partial").touch()
+        paths.migration_flag_for(target).touch()
+
+    codex.CodexAccountSwitcher().add_account(assume_yes=True)
+    claude = ClaudeAccountSwitcher()
+    assert claude._get_sequence_data() == roster
+    assert (target / cred.relative_to(legacy)).read_bytes() == b"synthetic Claude credential"
+    assert codex.CodexAccountSwitcher()._read_account_auth("1") == auth
+    assert not legacy.exists() and not paths.migration_flag_for(target).exists()
+
+
+@pytest.mark.parametrize("marker", [False, True])
+def test_migration_preserves_codex_data_from_earlier_build(tmp_path, monkeypatch, marker):
+    from claude_swap import paths
+    from claude_swap.exceptions import MigrationError
+    from claude_swap.models import Platform
+
+    monkeypatch.setattr(Platform, "detect", staticmethod(lambda: Platform.LINUX))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    legacy = paths.get_legacy_backup_root()
+    legacy.mkdir()
+    roster = legacy / "sequence.json"
+    roster.write_text('{"accounts":{}}')
+    target = paths.get_backup_root()
+    saved = target / "codex" / "credentials" / "account-1.json"
+    saved.parent.mkdir(parents=True)
+    saved.write_text('{"fixture":"keep"}')
+    if marker:
+        paths.migration_flag_for(target).touch()
+    # The socket observer is read-only even with a pending migration.
+    assert codex.CodexAccountSwitcher(initialize_storage=False).active_cached_usage(0) is None
+    with pytest.raises(MigrationError):
+        codex.CodexAccountSwitcher()
+    assert saved.read_text() == '{"fixture":"keep"}'
+    assert roster.read_text() == '{"accounts":{}}'
+    assert paths.migration_flag_for(target).exists() == marker

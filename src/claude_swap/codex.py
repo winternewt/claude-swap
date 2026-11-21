@@ -45,7 +45,7 @@ from claude_swap.json_output import SCHEMA_VERSION, USAGE_API_KEY, usage_row_fie
 from claude_swap.locking import FileLock
 from claude_swap.models import AccountSnapshot, AccountsSnapshot
 from claude_swap.oauth import account_headroom, format_reset
-from claude_swap.paths import get_backup_root
+from claude_swap.paths import get_backup_root, migrate_legacy_backup_dir
 from claude_swap.poll_policy import parse_reset_ts
 from claude_swap.reset_credit_display import reset_credit_display
 from claude_swap.printer import accent, dimmed, warning
@@ -140,8 +140,11 @@ def codex_org_label(plan_type: str | None) -> str:
 class CodexAccountSwitcher:
     """Manage multiple file-backed Codex authentication documents."""
 
-    def __init__(self, debug: bool = False) -> None:
+    def __init__(self, debug: bool = False, *, initialize_storage: bool = True) -> None:
         self.backup_dir = get_backup_root()
+        if initialize_storage:
+            # Even taking the account lock creates its parent directory.
+            migrate_legacy_backup_dir(self.backup_dir)
         self.provider_dir = self.backup_dir / "codex"
         self.credentials_dir = self.provider_dir / "credentials"
         self.sequence_file = self.provider_dir / "sequence.json"

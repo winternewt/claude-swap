@@ -34,6 +34,8 @@ The Codex provider comes from the MIT-licensed `errhythm/ccswap` code at `e7f251
 
 Claude account export and import cover the Claude roster. To back up offline Codex accounts, stop the watchers, close Codex sessions and protect a copy of the entire `<backup>/codex/` directory as credentials. A global `cswap purge` deletes that directory, including its private session history.
 
+On Linux and WSL, the first Codex command migrates an existing legacy Claude backup to the XDG data directory before opening the account store. If an interrupted move left Codex data in the destination, the command stops and names both directories. Back up both before reconciling them.
+
 ## Local quota API
 
 Read one JSON line from the [local usage socket](../README.md#serve-usage-to-other-local-tools). The top-level `active` field describes Claude. In the same response, `codex.config_dir` identifies the Codex home, `codex.taken_at` timestamps the read, and `codex.active` describes its active managed login. An unmanaged or missing login gives `null`. A managed API-key login has the `api key` sentinel and empty windows.

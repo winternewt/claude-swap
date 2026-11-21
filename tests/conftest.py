@@ -150,6 +150,7 @@ def _freeze_real_store_specs() -> tuple[tuple[Path, bool], ...]:
             # interrupted" and rmtree's the live store instead of refusing
             # the collision.
             (_paths.migration_flag_for(_paths.get_backup_root()), False),
+            (_paths.migration_flag_for(_paths.get_backup_root()).with_suffix(".migration.lock"), False),
             # TWO LEVELS DOWN, so the non-recursive `~/.claude` above does
             # not reach them. `--share-history` moves real transcripts to
             # `~/.claude/projects/<slug>/<uuid>.jsonl`, and `_mkdir_private`
