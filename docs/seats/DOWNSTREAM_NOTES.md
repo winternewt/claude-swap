@@ -61,7 +61,7 @@ State as of 2026-11-21.
 
 ## Open with the person
 
-- **Desk #383 open** (2026-11-21, S3): every `audited` force push trips the machine guard (october-mx agent-guard, D11), which
+- **Desk #383 answered: option 1** (the person, 2026-11-21: "1. The hook is made admin-side, so send msg to oct-mx"; relayed on the desk). Request sent by DM to october-mx/sysadmin 2026-11-22, awaiting its commit; until then each move still prompts. Original question (2026-11-21, S3): every `audited` force push trips the machine guard (october-mx agent-guard, D11), which
   is a denial when the person is away. Option 1, a narrow guard exception for that one push from this folder, made by the
   october-mx sysadmin seat on the person's word (recommended); option 2, a fast-forward branch marker under a new name.
   Default: nothing changes; while away, a marker move waits for the person. No script may hide the push from the guard.
