@@ -76,6 +76,28 @@ MenuItem Static.menu-item-muted { color: $secondary; }
     color: $secondary;
 }
 
+#watch-body {
+    height: 1fr;
+    background: $background;
+}
+
+#watch-body #accounts {
+    height: auto;
+}
+
+#codex-title {
+    height: 1;
+    margin-top: 1;
+    padding: 0 3;
+    color: $secondary;
+}
+
+#codex-panel {
+    height: auto;
+    padding: 1 4 1 4;
+    background: $background;
+}
+
 /* -- auto screen ---------------------------------------------------------- */
 
 #auto-top {

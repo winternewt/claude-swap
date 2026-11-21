@@ -17,7 +17,7 @@ from textual.widgets import ListItem, Static
 
 from claude_swap import oauth, pace, subscription
 from claude_swap.json_output import USAGE_API_KEY, USAGE_RELOGIN_REQUIRED
-from claude_swap.models import AccountSnapshot
+from claude_swap.models import AccountSnapshot, AccountsSnapshot
 from claude_swap.oauth import FIVE_HOUR_LABEL
 from claude_swap.printer import format_age
 from claude_swap.switcher import ERROR_NOTES
@@ -137,12 +137,14 @@ def usage_rows(
         suffix = f"{reset}  {amounts}" if reset else amounts
         suffix_full = f"{reset_full}  {amounts}" if reset_full else amounts
         rows.append(("$$", float(spend["pct"]), suffix, suffix_full))
-    for key, label in (("five_hour", FIVE_HOUR_LABEL), ("seven_day", "7d")):
+    # Codex reports its weekly window as "weekly"; it draws as the 7d row.
+    weekly_key = "seven_day" if last_good.get("seven_day") else "weekly"
+    for key, label in (("five_hour", FIVE_HOUR_LABEL), (weekly_key, "7d")):
         window = last_good.get(key)
         if window:
             reset, reset_full = _reset_parts(window, now)
             suffix, suffix_full = reset or "", reset_full or ""
-            if key == "seven_day":
+            if key == weekly_key:
                 marker = _pace_suffix(window, fetched_at)
                 if marker:
                     suffix = f"{suffix}  {marker}" if suffix else marker
@@ -506,6 +508,35 @@ class AccountsPanel(Static):
                 text.append("\n\n" if (multiline or previous_multiline) else "\n")
             text.append(block)
             previous_multiline = multiline
+        return text
+
+
+class CodexAccountsPanel(Static):
+    """Codex accounts as full cards, drawn as the watch screen draws Claude's:
+    the same card, bars and countdowns, under a header of their own."""
+
+    def __init__(self, *, id: str | None = None, classes: str | None = None) -> None:
+        super().__init__(id=id, classes=classes)
+        self._snapshot: AccountsSnapshot | None = None
+
+    def on_mount(self) -> None:
+        self.watch(self.app, "theme", lambda _t: self.refresh(layout=True))
+
+    def set_snapshot(self, snapshot: AccountsSnapshot) -> None:
+        self._snapshot = snapshot
+        self.refresh(layout=True)
+
+    def render(self) -> Text:
+        palette = Palette.from_theme(self.app.current_theme)
+        if self._snapshot is None:
+            return Text("loading…", style=palette.muted)
+        width = self.size.width or 80
+        now = time.time()
+        text = Text()
+        for i, acc in enumerate(self._snapshot.accounts):
+            if i:
+                text.append("\n\n")
+            text.append(fitted_card_text(acc, width, width, now=now, palette=palette))
         return text
 
 

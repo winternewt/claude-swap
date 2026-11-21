@@ -20,13 +20,15 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Callable
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, ListView, Static
 
 from claude_swap.models import AccountsSnapshot
-from claude_swap.tui.widgets import AccountItem, AccountsPanel, MenuItem
+from claude_swap.tui.widgets import AccountItem, AccountsPanel, CodexAccountsPanel, MenuItem
 
 if TYPE_CHECKING:
     from claude_swap.tui.app import CswapApp
@@ -358,14 +360,56 @@ class WatchScreen(AccountListScreen):
         Binding("up,k", "nav_up", show=False),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, codex_switcher=None) -> None:
         super().__init__()
         self._selecting = False
+        self._codex = codex_switcher
+
+    def compose(self) -> ComposeResult:
+        # Codex accounts follow Claude's under a header of their own, as the
+        # same cards; the section stays hidden while no Codex account is saved.
+        yield Static("", id="list-title")
+        with VerticalScroll(id="watch-body"):
+            yield ListView(id="accounts")
+            yield Static("codex accounts", id="codex-title", classes="codex-section")
+            yield CodexAccountsPanel(id="codex-panel", classes="codex-section")
+        yield Footer()
 
     def on_mount(self) -> None:
         self.watch(self.app, "refresh_status", self._on_refresh_status)
         self.query_one("#list-title", Static).update(self._title_text())
+        for widget in self.query(".codex-section"):
+            widget.display = False
         super().on_mount()
+        self._refresh_codex()
+        try:
+            from claude_swap.settings import load_settings
+
+            interval = load_settings(self.app.switcher.backup_dir).interval_seconds
+        except Exception:
+            interval = 60
+        self.set_interval(interval, self._refresh_codex)
+
+    @work(thread=True, exclusive=True, group="codex-watch", exit_on_error=False)
+    def _refresh_codex(self) -> None:
+        """Read the Codex accounts off the UI thread; a failed read keeps the last one."""
+        try:
+            if self._codex is None:
+                from claude_swap.codex import CodexAccountSwitcher
+
+                # Read only: no migration or directory made by merely watching.
+                self._codex = CodexAccountSwitcher(initialize_storage=False)
+            snapshot = self._codex.accounts_snapshot()
+        except Exception:
+            return
+        self.app.call_from_thread(self._show_codex, snapshot)
+
+    def _show_codex(self, snapshot: AccountsSnapshot) -> None:
+        if not self.is_mounted:
+            return
+        for widget in self.query(".codex-section"):
+            widget.display = bool(snapshot.accounts)
+        self.query_one(CodexAccountsPanel).set_snapshot(snapshot)
 
     def _title_text(self) -> str:
         if self._selecting:

@@ -1249,6 +1249,48 @@ class TestWatchScreen:
             await pilot.pause()
             assert isinstance(app.screen, DashboardScreen)
 
+    @staticmethod
+    def _codex(accounts):
+        from unittest.mock import Mock
+
+        codex = Mock()
+        codex.accounts_snapshot.return_value = AccountsSnapshot(
+            "1" if accounts else None, tuple(accounts), 1.0)
+        return codex
+
+    async def test_codex_accounts_show_as_cards_under_their_own_header(self, tmp_path):
+        from claude_swap.tui.dashboard import WatchScreen
+        from claude_swap.tui.widgets import CodexAccountsPanel
+
+        codex = self._codex([AccountSnapshot(
+            "1", "coder@example.test", "Plus", "", True, "oauth", True,
+            UsageEntry(last_good={"five_hour": {"pct": 30.0}, "weekly": {"pct": 41.0}},
+                       fetched_at=time.time()),
+        )])
+        app = make_app(self._fake(tmp_path))
+        async with app.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            await app.push_screen(WatchScreen(codex_switcher=codex))
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            title = app.screen.query_one("#codex-title")
+            panel = app.screen.query_one(CodexAccountsPanel)
+            assert title.display and panel.display
+            text = panel.render().plain
+            assert "coder@example.test" in text and "● active" in text
+            assert "7d" in text and "41%" in text and "30%" in text
+
+    async def test_codex_section_hidden_without_codex_accounts(self, tmp_path):
+        from claude_swap.tui.dashboard import WatchScreen
+
+        app = make_app(self._fake(tmp_path))
+        async with app.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            await app.push_screen(WatchScreen(codex_switcher=self._codex([])))
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            assert not app.screen.query_one("#codex-title").display
+
     async def test_blocked_normal_allows_store_only_repaint_without_stale_overpaint(
         self, tmp_path
     ):
