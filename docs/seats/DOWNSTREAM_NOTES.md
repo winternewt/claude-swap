@@ -67,7 +67,7 @@ State as of 2026-11-21.
   Default: nothing changes; while away, a marker move waits for the person. No script may hide the push from the guard.
   Filed as kit #576: a behavior datapoint on edge DE5 (marker moves only by force push) — a guard asking on every
   force push turns each unattended move into a stall.
-- PR #1 merged 2026-11-21 (desk #373 answered, option 1). Worktree `.worktrees/codex-merge` unlocked, for the person to remove.
+- PR #1 merged 2026-11-21 (desk #373 answered, option 1). Worktree `.worktrees/codex-merge` and branch `codex-merge` removed by the person 2026-11-22.
 - Desk #351 (2026-11-16) is answered: the person, in this seat's chat, "reword the register". docs/TRUST.md now says the
   pin no longer governs the seat's watchdog, which runs in the machine's one watchdog (the kit's D205); the pin moved
   past the hold to v0.1.229. #349 was withdrawn as superseded by it.
