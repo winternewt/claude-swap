@@ -85,7 +85,7 @@ State as of 2026-11-21.
   a new hard line is read and accepted by the seat while the kit is private (step 2 above).
 
 ## Reflect
-- reflect after 2026-11-29: classes/base/BASE.md as of v0.1.259 (an unlocked worktree said as a paste-ready `unlocked: to delete <cmd>` line).
+- reflect after 2026-11-29: classes/base/BASE.md as of v0.1.260 (v0.1.259: an unlocked worktree said as a paste-ready `unlocked: to delete <cmd>` line; v0.1.260: a seat's own reset at its discretion, context nudges at 60/80 %, a diary file).
 
 - reflect after 2026-11-23: classes/base/BASE.md as of v0.1.224 ("Only a real fork goes to the person", kit #510). Read as its
   adversary 2026-11-16: no concern; a red flag (adopt flagged code, or stay on the last marker) is a real fork, and
