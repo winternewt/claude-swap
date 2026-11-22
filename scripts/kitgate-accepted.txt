@@ -57,3 +57,7 @@ pipe to shell	skills/levers/SKILL.md	| "the seat-builder says my ticket waits", 
 # process names (its `|` alternation, no shell), and the levers row for the desk's pasted line, reworded again.
 pipe to shell	bin/release.py	AGENT_NAMES = re.compile(r"claude|python[0-9.]*|uvx?|node|npm|npx|pytest|bun|deno")  # a process's /proc name, agentic
 pipe to shell	skills/levers/SKILL.md	| "the seat-builder says my ticket waits", "set up the X seat here", the long `gh api ... \| sh -s X` line relayed | `/seats:seat SEAT` | where the clone does not declare it and its ticket waits, the desk's bootstrap fetched at its commit and run in this clone (the kit pinned, the ticket joined, the pull request opened, or an overlay placed where the repository keeps its seats untracked), then the seat punched in; a repository with no seats sent to `/seats:onboard` (#382, #396, #547) |
+
+# 2026-11-22, the standing grant of 2026-11-09. Read safe at v0.1.259 (SECURITY_AUDIT.md): a documentation link to the
+# Codex configuration reference in the Codex auto-review policy draft; no code fetches it.
+new network host	rules/CODEX_AUTOREVIEW.md	[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
