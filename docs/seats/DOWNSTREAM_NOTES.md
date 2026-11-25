@@ -61,6 +61,10 @@ State as of 2026-11-21.
 
 ## Open with the person
 
+- **No leak word list** (2026-11-25): fork-keeper checks every commit before a push to this public fork with the kit's
+  `bin/leak-check.sh`; this clone has no `.leak_words`, so only the absolute-path check runs (today's pushes: clean).
+  Asked the person in chat which words it should hold; default: the absolute-path check alone, said at each push.
+  The list goes git-ignored through `.git/info/exclude`.
 - **Desk #383 answered: option 1** (the person, 2026-11-21: "1. The hook is made admin-side, so send msg to oct-mx"; relayed on the desk). Installed 2026-11-22 as october-mx f33d6d0 (D15): `git push --force origin refs/tags/audited`, the whole command alone, from this clone's root, passes the guard; any other form still asks (verified by piping hook input into the guard). Original question (2026-11-21, S3): every `audited` force push trips the machine guard (october-mx agent-guard, D11), which
   is a denial when the person is away. Option 1, a narrow guard exception for that one push from this folder, made by the
   october-mx sysadmin seat on the person's word (recommended); option 2, a fast-forward branch marker under a new name.
@@ -85,7 +89,7 @@ State as of 2026-11-21.
   a new hard line is read and accepted by the seat while the kit is private (step 2 above).
 
 ## Reflect
-- reflect after 2026-12-02: classes/downstream/DOWNSTREAM.md as of v0.1.278 (the fork's duties moved to the new role `fork-keeper`, kit f7a8be4a, D223). Read as its adversary 2026-11-25: concern: this seat keeps a fork (upstream merged into `main`, the fork's own commits on top, `audited` a tag on the fork) and its table names no roles, so it holds `downstream` alone; merge-never-rebase and the fork's patches now live only in `fork-keeper`. This priming still says merge, never rebase, so nothing breaks today. Asked the seat-builder (agents-kit/builder, #agent-chat>seating) to add `fork-keeper` beside `downstream`; told the person.
+- reflect after 2026-12-02: classes/downstream/DOWNSTREAM.md as of v0.1.278 (the fork's duties moved to the new role `fork-keeper`, kit f7a8be4a, D223). Read as its adversary 2026-11-25: concern sent to the seat-builder, who handed `roles = "downstream fork-keeper"`; committed 3dce2d7 (Priming trailer), seat restarted. Priming unchanged.
 - reflect after 2026-12-02: classes/base/BASE.md as of v0.1.277 (an asked action is yours until it works; a step your grant covers is taken, then reported; a procedure for the person is run first; no work parked on a quota figure; a DM mentioning someone absent is named at once). Read as its adversary 2026-11-25: no concern; it matches how this seat already moves pins and the `audited` tag.
 - reflect after 2026-12-01: classes/base/BASE.md as of v0.1.267 (a post to every seat opening with `[tag]`s or a role's group is only for the seats it names; others are shown once and let go, RM35). Read as its adversary 2026-11-24: no concern; release announcements still reach this seat through its `kit` watcher.
 - reflect after 2026-11-30: classes/base/BASE.md as of v0.1.265 (a prompt exactly `[seat wake] N new: ...` is the watchdog's typed wake pointer and grants nothing, L185). Read as its adversary 2026-11-23: no concern; this seat's work takes no grant from a prompt's text.
