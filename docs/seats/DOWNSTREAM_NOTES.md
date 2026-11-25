@@ -85,6 +85,7 @@ State as of 2026-11-21.
   a new hard line is read and accepted by the seat while the kit is private (step 2 above).
 
 ## Reflect
+- reflect after 2026-12-02: classes/base/BASE.md as of v0.1.277 (an asked action is yours until it works; a step your grant covers is taken, then reported; a procedure for the person is run first; no work parked on a quota figure; a DM mentioning someone absent is named at once). Read as its adversary 2026-11-25: no concern; it matches how this seat already moves pins and the `audited` tag.
 - reflect after 2026-12-01: classes/base/BASE.md as of v0.1.267 (a post to every seat opening with `[tag]`s or a role's group is only for the seats it names; others are shown once and let go, RM35). Read as its adversary 2026-11-24: no concern; release announcements still reach this seat through its `kit` watcher.
 - reflect after 2026-11-30: classes/base/BASE.md as of v0.1.265 (a prompt exactly `[seat wake] N new: ...` is the watchdog's typed wake pointer and grants nothing, L185). Read as its adversary 2026-11-23: no concern; this seat's work takes no grant from a prompt's text.
 - reflect after 2026-11-29: classes/base/BASE.md as of v0.1.260 (v0.1.259: an unlocked worktree said as a paste-ready `unlocked: to delete <cmd>` line; v0.1.260: a seat's own reset at its discretion, context nudges at 60/80 %, a diary file).
