@@ -61,3 +61,6 @@ pipe to shell	skills/levers/SKILL.md	| "the seat-builder says my ticket waits", 
 # 2026-11-22, the standing grant of 2026-11-09. Read safe at v0.1.259 (SECURITY_AUDIT.md): a documentation link to the
 # Codex configuration reference in the Codex auto-review policy draft; no code fetches it.
 new network host	rules/CODEX_AUTOREVIEW.md	[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+# 2026-11-25, the standing grant of 2026-11-09. Read safe at v0.1.277 (SECURITY_AUDIT.md): the bootstrap template reads, never
+# writes, the managed and user settings to find a machine-wide pin of the kit (#622).
+persistence	drivers/claude-code/bootstrap.sh.in	break' "${CLAUDE_MANAGED_SETTINGS:-/etc/claude-code/managed-settings.json}" "$cfg/settings.json" "$market" \
