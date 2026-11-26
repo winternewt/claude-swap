@@ -109,6 +109,33 @@ def test_a_moved_tag_stops_the_move(kit):
     assert r.returncode == 4 and "tag moved" in r.stdout
 
 
+def test_a_marker_moved_forward_to_a_release_is_taken_in(kit):
+    sh(kit, "git", "tag", "claude-latest")
+    assert gate(kit, "v0.1.0", "v0.1.0").returncode == 0
+    release(kit, "v0.1.1", {"docs/NOTES.md": "a\n"})
+    sh(kit, "git", "tag", "-f", "claude-latest")
+    r = gate(kit, "v0.1.0", "v0.1.1")
+    assert r.returncode == 0, r.stdout
+
+
+def test_a_marker_moved_off_every_release_stops_the_move(kit):
+    sh(kit, "git", "tag", "codex-latest")
+    assert gate(kit, "v0.1.0", "v0.1.0").returncode == 0
+    sh(kit, "git", "commit", "-q", "--allow-empty", "-m", "not a release")
+    sh(kit, "git", "tag", "-f", "codex-latest")
+    r = gate(kit, "v0.1.0", "v0.1.0")
+    assert r.returncode == 4 and "no release tag names" in r.stdout
+
+
+def test_a_marker_moved_back_stops_the_move(kit):
+    release(kit, "v0.1.1", {"docs/NOTES.md": "a\n"})
+    sh(kit, "git", "tag", "claude-latest")
+    assert gate(kit, "v0.1.0", "v0.1.1").returncode == 0
+    sh(kit, "git", "tag", "-f", "claude-latest", "v0.1.0")
+    r = gate(kit, "v0.1.0", "v0.1.1")
+    assert r.returncode == 4 and "not forward" in r.stdout
+
+
 def test_an_installed_copy_must_equal_its_tag(kit, tmp_path):
     release(kit, "v0.1.1", {"docs/NOTES.md": "a\n"})
     copy = tmp_path / "copy"

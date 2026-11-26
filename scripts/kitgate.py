@@ -12,7 +12,9 @@ source, never the installed copy, and lists what changed on the paths a login co
 
 The source comes from a bare mirror of the kit's repository, kept in .kitgate/kit.git at this
 repository's root (ignored by git) and fetched on every run. A tag that moved since the mirror
-saw it is refused by the fetch, which stops the gate.
+saw it is refused by the fetch, which stops the gate. The kit's markers claude-latest and
+codex-latest move at each release by design (its D221): each is taken in only when it moved
+forward to a commit a release tag names, and stops the gate otherwise.
 
 EXIT STATUS
   0  clean: nothing on the watched paths changed; the pin moves without asking the person.
@@ -98,6 +100,10 @@ class HardStop(Exception):
     pass
 
 
+# Tags the kit moves by design (D221): checked by marker(), never refused as moved.
+MARKERS = ("claude-latest", "codex-latest")
+
+
 def configure(source: str, mirror: Path) -> None:
     global KIT_URL, MIRROR
     KIT_URL, MIRROR = source, mirror
@@ -118,13 +124,44 @@ def fetch() -> None:
         if p.returncode:
             raise Unknown(f"clone {KIT_URL}: {p.stderr.strip()}")
     # No --force: a tag the mirror holds that now names another commit is refused, and stops us.
-    # Not --quiet: it hides the "would clobber existing tag" line this reads.
-    p = subprocess.run(["git", "--git-dir", str(MIRROR), "fetch", "--tags", KIT_URL,
-                        "+refs/heads/*:refs/heads/*"], capture_output=True, text=True)
+    # Not --quiet: it hides the "would clobber existing tag" line this reads. The markers are left
+    # out here and checked on their own below: the kit moves them at each release.
+    p = subprocess.run(["git", "--git-dir", str(MIRROR), "fetch", "--no-tags", KIT_URL,
+                        "+refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*",
+                        *(f"^refs/tags/{m}" for m in MARKERS)], capture_output=True, text=True)
     if p.returncode:
         if "would clobber existing tag" in p.stderr:
             raise HardStop(f"a kit tag moved since the mirror saw it:\n{p.stderr.strip()}")
         raise Unknown(f"fetch {KIT_URL}: {p.stderr.strip()}")
+    for m in MARKERS:
+        marker(m)
+
+
+def marker(name: str) -> None:
+    """Take the kit's marker NAME in only if it moved forward, to a commit a release tag names.
+
+    The kit moves claude-latest and codex-latest forward at each release that changed what that
+    client runs, and only so (its D221). A marker moved back, sideways or off every release is a
+    moved tag, and stops the gate like any other."""
+    p = subprocess.run(["git", "ls-remote", "--tags", KIT_URL, f"refs/tags/{name}"],
+                       capture_output=True, text=True)
+    if p.returncode:
+        raise Unknown(f"ls-remote {KIT_URL}: {p.stderr.strip()}")
+    if not p.stdout.strip():
+        return  # the kit has no such marker (yet, or any more): nothing to take in
+    staged = f"refs/kitgate/{name}"
+    git("fetch", "--no-tags", KIT_URL, f"+refs/tags/{name}:{staged}")
+    new = git("rev-parse", f"{staged}^{{commit}}").strip()
+    if not any(t.startswith("v") for t in git("tag", "--points-at", new).split()):
+        raise HardStop(f"the kit's marker {name} names {new[:10]}, which no release tag names")
+    have = subprocess.run(["git", "--git-dir", str(MIRROR), "rev-parse", "--verify", "--quiet",
+                           f"refs/tags/{name}^{{commit}}"], capture_output=True, text=True)
+    old = have.stdout.strip()
+    if old and old != new and subprocess.run(
+            ["git", "--git-dir", str(MIRROR), "merge-base", "--is-ancestor", old, new]).returncode:
+        raise HardStop(f"the kit's marker {name} moved from {old[:10]} to {new[:10]}, not forward")
+    git("update-ref", f"refs/tags/{name}", git("rev-parse", staged).strip())
+    git("update-ref", "-d", staged)
 
 
 def tree(tag: str) -> dict[str, bytes]:
