@@ -4,9 +4,9 @@ State as of 2026-11-21.
 
 ## Marker
 
-- `audited` (a tag) → `f2d5228` (2026-11-21, the watch-screen Codex quotas `71282f6`; before it `d73a8ef`, the TUI Codex add/remove `348c385`; before it `77facd7`, the PR #1 adoption, Codex account switching), moved on 2026-11-21
-  from `f5b8237`. Its code is `5e5bc7d` (the merge of `feature/codex-port` plus this seat's zombie fix), read in full,
-  tests green, wheel byte-identical. `cswap upgrade` installed it here (1.1.0 at f2d5228, installed files == source).
+- `audited` (a tag) → `ee6db49` (2026-11-26, the v1.2.0 audit; its code is the merge `6aa982f`, read in full, tests
+  5895 green, wheel byte-identical), moved from `f2d5228` (the watch-screen Codex quotas, code `7474b28`).
+  `cswap upgrade` installed it here (1.2.0, commit_id ee6db49).
   The OpenAI/ChatGPT hosts are approved (the person, desk #373, 2026-11-21: "chck and merge").
 - It moves under the kit's D101 grant: only `refs/tags/audited`, only to a descendant, with the old
   commit recorded first.
@@ -44,9 +44,8 @@ State as of 2026-11-21.
 
 ## Upstream
 
-- Last release adopted: `v1.1.0`, merged at `313ec51` on 2026-11-14, on the read (no red flag; the person away).
-  Before it, `v1.0.0` at `41cc1fb` on the person's answer to desk #226. Upstream `main` has commits past `v1.1.0`,
-  untagged; the next tag is the next pass.
+- Last release adopted: `v1.2.0`, merged at `6aa982f` on 2026-11-26, on the read (no red flag; the person away;
+  tagged upstream 2026-11-21, found late: no upstream watcher yet, kit #26). Before it, `v1.1.0` at `313ec51`.
 - **Mac-only changes are accepted without asking** (the person, 2026-11-09, desk #226), and **a Linux change that is
   no red flag is adopted on the read too**, then told to the person as an informational changelog in the session's
   report (the person, 2026-11-15; this seat runs no weekly retro). Only a red flag goes to the desk. See
