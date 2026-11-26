@@ -50,13 +50,14 @@ class TestConfigList:
             "autoswitch.unhealthyTicks",
             "autoswitch.model",
             "ui.theme",
+            "ui.orgTag",
             "run.shareHistory",
             "updates.check",
             "usage.headerProbe",
             "usage.fableProbe",
         ):
             assert key in out
-        assert out.count("(default)") == 16
+        assert out.count("(default)") == 17
 
     def test_set_key_not_marked_default(self, temp_home, capsys):
         _run(["set", "autoswitch.cooldownSeconds", "600"], capsys)
@@ -83,7 +84,7 @@ class TestConfigList:
         assert payload["schemaVersion"] == 1
         assert payload["path"].endswith("settings.json")
         by_key = {entry["key"]: entry for entry in payload["settings"]}
-        assert len(by_key) == 16
+        assert len(by_key) == 17
         for key in ("threshold5h", "threshold7d"):
             assert by_key[f"autoswitch.{key}"]["value"] is None
         assert by_key["autoswitch.threshold"]["value"] == 90.0
