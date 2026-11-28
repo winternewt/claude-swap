@@ -1,6 +1,6 @@
 # Downstream seat — notes
 
-State as of 2026-11-21.
+State as of 2026-11-28.
 
 ## Marker
 
@@ -13,7 +13,7 @@ State as of 2026-11-21.
 
 ## Seats kit
 
-- The seat runs on kit v0.1.293; its watchdog was restarted on that copy by `stop` + `punch-in`.
+- The seat runs on kit v0.1.294; its watchdog was restarted on that copy by `stop` + `punch-in`.
 - **Standing adoption, behind the gate** (the person, 2026-10-17: "auto-adopt further ones";
   2026-10-18: "build the gate and threat model, this repo is sensitive"; 2026-10-21: the kit can no
   longer move this pin, so the seat tracks it itself). The trigger is the seat's watcher
@@ -53,7 +53,7 @@ State as of 2026-11-21.
 - The merge keeps the fork's `UPGRADE_COMMANDS` and drops upstream's release-cooldown notice (it points at
   `uv tool upgrade`); expect that conflict again in `update_check.py` and `tests/test_update_check.py`, and in
   `tests/conftest.py` beside the usage-server socket line.
-- Tests run as `nice -n 19 uv run pytest -q` on this machine: a user-wide hook refuses a test run without it (the
+- Tests run as `nice -n 19 uv run pytest -q` on this machine (the guard accepts nice 15 to 19 since 2026-11-27, the kit runs 18; the person's CLAUDE.md still says 19): a user-wide hook refuses a test run without it (the
   machine's sysadmin seat, on the person's word, 2026-11-19).
 - README's Installation section installs this fork at `audited` (32b4f78, 2026-11-17, for a second user of the fork);
   keep the fork's lines when an upstream merge conflicts there, and its `docs/` links relative.
